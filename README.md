@@ -66,17 +66,16 @@ fav movies / fav shows            (jump into a section of the favourites page)
 
 ```
 titanic
-titanic 1997
-tos                                (aliases like ds9, voy, tng, pic... expand automatically)
+titanic 1997                      
 star trek voyager
 ```
 
 ### Season / Episode
 ```
-star trek ds9 season 2
-star trek ds9 s2
-star trek ds9 s2e5
-star trek ds9 specials             (= season 0)
+Farscape season 2
+Farscape s2
+Farscape s2e5
+Farscape specials             (= season 0)
 ```
 
 ### Context shortcuts (while already inside a series/season/episode)
@@ -86,9 +85,8 @@ e5 / episode 5
 s2e5
 ```
 
-### Collections & People
+### People
 ```
-matrix collection
 person keanu reeves                (his profile page)
 movies persons keanu reeves        (his movies — order-independent, e.g. also "persons movies keanu reeves")
 tvshows actors keanu reeves        (his TV shows)
@@ -172,10 +170,10 @@ tags star trek films filter feature trailer
 
 ### Reset
 ```
-reset filters
-movies reset filters
-tags star trek films reset filters
-reset filters rating pg-13         (removes only that filter, keeps the rest)
+reset filters                      (current page, resets all filters)
+movies reset filters               (remote jumbs to movie libary and then resets all filters)
+tags star trek films reset filters (remote jumbs to tag an then resets all filters)
+reset filters rating pg-13         (current page, removes only that filter, keeps the rest)
 ```
 
 ---
@@ -198,10 +196,10 @@ Same command works whether you're on a movies/tvshows page (radio dialog) or a l
 **Only on list views (tags/sets/homevideos/...):** `folders`
 
 ```
-sort name
-sort community rating descending
-sort ascending                     (order only, keeps current sort-by)
-movies sort random
+sort name                          (current page)
+sort community rating descending   (current page, combination of sort type + descending/ascending)
+sort ascending                     (current page, order only, keeps current sort-by)
+movies sort random                 (remote jumb to movie libary, then applies sort)
 ```
 
 ---
@@ -220,7 +218,7 @@ Same command, auto-detects the mechanism (action sheet on movies/tvshows, dropdo
 ```
 view poster
 view primary show title
-movies genre comedy view banner sort name letter c
+movies genre comedy view banner sort name
 ```
 
 ---
@@ -228,8 +226,7 @@ movies genre comedy view banner sort name letter c
 ## 7. Watched / Favorite / Submenu (single items)
 
 ```
-watched
-mark as watched / mark played / set watched / unset watched
+watched / mark as watched / mark played / set watched / unset watched
 add to favorites / mark as favorite / set fav / unmark fav
 ```
 Work bare (current page), as a remote prefix (`watched titanic`), and as a remote suffix (`titanic watched`).
@@ -260,8 +257,8 @@ download s1e1 star trek ds9
 
 ```
 a                                  (tries navigating first, falls back to the letter picker)
-letter a
-letter #
+letter a                           (letter picker override)
+letter #                           (letter picker override)
 tags star trek films letter s      (combinable, always runs last)
 ```
 
