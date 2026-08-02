@@ -13,11 +13,16 @@ target → filter → view → sort → reset → play/shuffle/watched/favorite/
 ## 1. Navigating to a library
 
 ```
-movies
-tvshows
-livetv
-sets / collections
-homevideos
+Remote from everywhere:
+movie(s) / film(s)
+tvshow(s) / show(s) / tv / series
+livetv / live / pvr
+set(s) / collection(s)
+
+From Home:
+custom libary names (not hardcoded)
+From Home Videos nested folder structur:
+custom video folder names (not hardcoded)
 ```
 Also works with the library's own custom name from your server.
 
