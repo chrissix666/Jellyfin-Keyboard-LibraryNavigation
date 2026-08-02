@@ -275,10 +275,10 @@ download s1e1 star trek ds9
 a                                          (current page, tries navigating first, falls back to the letter picker)
 letter a                                   (current page, letter picker override)
 letter #                                   (current page, letter picker override)
-movies filter genre comedy letter s        (remote jump, combinable, always runs last)
-movies view banner letter b                (remote jump, combinable, always runs last)
-tvshows sort name letter f                 (remote jump, combinable, always runs last)
-tag "tagname" letter k                     (remote jump, combinable, always runs last) 
+movies filter genre comedy letter s        (remote jump, combinable)
+movies view banner letter b                (remote jump, combinable)
+tvshows letter f sort name                 (remote jump, combinable)
+tag "tagname" letter k                     (remote jump, combinable) 
 ```
 
 ---
