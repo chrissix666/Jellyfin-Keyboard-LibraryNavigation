@@ -21,7 +21,7 @@ set(s) / collection(s)
 
 From Home:
 custom libary names (not hardcoded)
-From Home Videos nested folder structur:
+From Home Videos nested folder structure:
 custom video folder names (not hardcoded)
 ```
 Also works with the library's own custom name from your server.
@@ -74,6 +74,7 @@ titanic
 titanic 1997                      
 star trek voyager
 ```
+" - ", ": " and "(...)" are automatically parsed out, but they can be entered if desired.
 
 ### Season / Episode
 ```
@@ -81,7 +82,9 @@ Farscape season 2
 Farscape s2
 Farscape s2e5
 Farscape specials             (= season 0)
+Farscape s0                   (= specials)
 ```
+It supports both "S01E01" and "S1E1". The 0 is parsed automatically. It also supports "S01:E01" / "S1:E1", the : is parsed automatically as well.
 
 ### Context shortcuts (while already inside a series/season/episode)
 ```
@@ -89,6 +92,7 @@ s2 / season 2
 e5 / episode 5
 s2e5
 ```
+It supports both "S01E01" and "S1E1". The 0 is parsed automatically. It also supports "S01:E01" / "S1:E1", the : is parsed automatically as well.
 
 ### People
 ```
@@ -100,6 +104,12 @@ episode actors keanu reeves        (his individual episode appearances)
 Person triggers: `person, persons, actor, actors, actress, actresses, people, peoples, celebrity, celeb`
 Media-type triggers: `movie/movies/film/films`, `tvshow/tvshows/series/show/shows/tv`, `episode/episodes`
 
+### Genres (locked-library)
+```
+tvshows genre action
+movies genre horror
+```
+
 ### Tags, genres, studios (mixed, cross-library)
 ```
 tag star trek films
@@ -109,9 +119,10 @@ studio warner bros
 
 ### Random picks
 ```
-random
+random                                           (random movie, tvshow or collection)
 random movie / random show / random collection
-random movie random                (nested — random pick from within a random pick)
+random set random movie                          (nested — random pick from within a random pick)
+random tvshow random episode                     (nested — random pick from within a random pick)
 ```
 
 ---
@@ -119,11 +130,11 @@ random movie random                (nested — random pick from within a random 
 ## 3. Playing
 
 ```
-play titanic
+play titanic                       (triggers the resume button if there is already a marker in it)
 titanic play                       (either order gives the same result)
-resume titanic
-replay titanic
-shuffle
+resume titanic                     (triggers the resume button if there is already a marker in it)
+replay titanic                     (forced triggered replay)
+shuffle                            (Only on tvshows, seasons, collections, not movie or episode level)
 ```
 `play`/`replay`/`resume` also work as a suffix on almost any target: `star trek ds9 season 2 play`, `s2 play`. On series/season/collections this clicks the visible Play/Shuffle button; on movies/episodes it plays directly, distinguishing resume vs. replay.
 
@@ -261,10 +272,13 @@ download s1e1 star trek ds9
 ## 8. A–Z letter picker
 
 ```
-a                                  (tries navigating first, falls back to the letter picker)
-letter a                           (letter picker override)
-letter #                           (letter picker override)
-tags star trek films letter s      (combinable, always runs last)
+a                                          (current page, tries navigating first, falls back to the letter picker)
+letter a                                   (current page, letter picker override)
+letter #                                   (current page, letter picker override)
+movies filter genre comedy letter s        (remote jump, combinable, always runs last)
+movies view banner letter b                (remote jump, combinable, always runs last)
+tvshows sort name letter f                 (remote jump, combinable, always runs last)
+tag "tagname" letter k                     (remote jump, combinable, always runs last) 
 ```
 
 ---
