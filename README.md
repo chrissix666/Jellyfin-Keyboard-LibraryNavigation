@@ -304,16 +304,36 @@ view <value(s)>
 
 ---
 
-## 10. Watched / Favorite — `[both]` `Action`
-
-Every combination of 15 sentence patterns × 5 word spellings is valid — 75 phrasings for favorite alone:
-`add to` / `add` / `delete from` / `delete` / `mark as` / `mark` / `set to` / `set` / `unmark from` / `unmark` / `unset from` / `unset` / `remove from` / `remove` / `toggle` combined with `favorite` / `favourite` / `favorites` / `favourites` / `fav`.
-
+10. Watched / Favorite — `[both]` `Action`
+Watched — 23 fixed phrasings
 ```
-watched                mark as watched         set watched          unplayed         toggle watched
-add to favorites        mark fav                toggle favourite     unset from favourites
+watched
+mark watched              mark as watched
+played                    mark played              mark as played
+set watched               unset watched
+set as watched             unset from watched
+set played                 unset played              unset as played
+unmark from watched
+set to watched              set to unwatched
+set to unplayed
+set unplayed
+mark unwatched               mark as unwatched
+mark unplayed
+unplayed
+toggle watched
 ```
-Work bare (current page), as a remote prefix (`watched oppenheimer`), and as a remote suffix (`oppenheimer watched`).
+Favorite — 75 generated phrasings (15 sentence patterns × 5 spellings)
+Patterns: `add to` / `add` / `delete from` / `delete` / `mark as` / `mark` / `set to` / `set` / `unmark from` / `unmark` / `unset from` / `unset` / `remove from` / `remove` / `toggle`
+Spellings: `favorite` / `favourite` / `favorites` / `favourites` / `fav`
+Every pattern combines with every spelling — e.g. the `add to` pattern alone gives you:
+```
+add to favorite        add to favourite
+add to favorites        add to favourites
+add to fav
+```
+...and the same five-spelling set repeats for all 14 other patterns (`add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`).
+---
+Both work bare (current page), as a remote prefix (`watched oppenheimer`), and as a remote suffix (`oppenheimer watched`).
 
 ### Submenu actions — `[both]` `Action`
 ```
