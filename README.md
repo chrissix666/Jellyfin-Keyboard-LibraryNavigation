@@ -209,8 +209,11 @@ On series/season/collections this clicks the visible Play/Shuffle button (there 
 ### Chapter & percent seeking — `[both]`, movies/episodes only
 ```
 play oppenheimer chapter 3
+play oppenheimer 0%                     (literally the same as forced replay)
 play oppenheimer 50%
+play oppenheimer 100%                   (100% falls back to 99%)
 play stranger things s4e1 chapter 2
+play stranger things s4e1 chaptername   (some videos include real chapter names, allowing direct jumps instead of chapter numbers)
 play chapter 3                          (bare — seeks in the movie/episode you're already on)
 ```
 
@@ -223,7 +226,7 @@ trailer play oppenheimer
 oppenheimer trailer play
 play oppenheimer trailer
 trailer oppenheimer play
-trailer                                 (bare, current page)
+trailer / play trailer / trailer play    (bare, current page)
 ```
 Works on movies, series, seasons, collections — not individual episodes.
 
