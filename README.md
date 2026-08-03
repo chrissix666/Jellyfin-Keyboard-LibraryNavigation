@@ -305,6 +305,7 @@ view <value(s)>
 ---
 
 10. Watched / Favorite — `[both]` `Action`
+
 Watched — 23 fixed phrasings
 ```
 watched
