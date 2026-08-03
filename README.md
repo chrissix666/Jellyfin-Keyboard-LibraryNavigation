@@ -147,7 +147,7 @@ s4e1
 ## 4. Collections — `[remote]` `Navigation`, order-fixed (title, then collection word)
 ```
 john wick collection
-dark knight trilogy               (if "trilogy" isn't a recognized suffix on your server, use "collection")
+alien anthology
 ```
 Recognized collection-suffix words (multilingual): `collection`, `filmreihe`, `anthology`, `saga`, `set`, and equivalents in Portuguese, Spanish, Dutch, Italian, Polish, Czech, Slovak, Croatian, Slovenian, Romanian, Hungarian, Finnish, Scandinavian, and Turkish.
 
@@ -197,7 +197,7 @@ play oppenheimer
 oppenheimer play                        ← identical, order-free
 resume oppenheimer                      (same as play — see §1)
 replay oppenheimer                      (forces restart from the beginning — see §1)
-shuffle
+shuffle                                 (Collection- TvShow- Season-Level, Libary Views (Movies, TvShows) & List Views (Tags, Genres, ..) not on Movies or Episodes)
 ```
 `play`/`replay`/`resume`/`shuffle` work as prefix *or* suffix on almost any target, including context shortcuts:
 ```
@@ -208,12 +208,12 @@ On series/season/collections this clicks the visible Play/Shuffle button (there 
 
 ### Chapter & percent seeking — `[both]`, movies/episodes only
 ```
-play oppenheimer chapter 3
-play oppenheimer 0%                     (literally the same as forced replay)
-play oppenheimer 50%
-play oppenheimer 100%                   (100% falls back to 99%)
-play stranger things s4e1 chapter 2
-play stranger things s4e1 chaptername   (some videos include real chapter names, allowing direct jumps instead of chapter numbers)
+play oppenheimer chapter 3              (chapter number, count)
+play oppenheimer 0%                     (% is optional, literally the same as forced replay)
+play oppenheimer 50%                    (% is optional, counted half of video, everything betwen 0-100 possible)
+play oppenheimer 100%                   (% is optional, 100% falls back to 99%)
+play stranger things s4e1 chapter 2     (chapter number, count)
+play stranger things s4e1 chaptername   (some videos includes real chapter names in Metadata)
 play chapter 3                          (bare — seeks in the movie/episode you're already on)
 ```
 
