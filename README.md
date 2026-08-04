@@ -205,7 +205,7 @@ movie starship troopers		(remote · jump — movie prefix optional)
 movie armageddon 1998		(remote · jump — movie prefix optional, with a release year to disambiguate)
 blade runner final cut		(remote · jump — version/edition/cut suffix appended to the end)
 ```
-*When a movie exists multiple times in the library, its distinguisher must be included. In this example, " (International Theatrical)" and " (Final Cut)" are appended after the title. The parentheses themselves are ignored during matching. If there is only one match, the content inside the parentheses is also ignored. However, if there are multiple matches, the text inside the parentheses must be provided to identify the correct item.
+*When a movie exists multiple times in the library, its distinguisher must be included. In the last "Blade Runner" example, " (International Theatrical)" and " (Final Cut)" are appended after the title. The parentheses themselves are ignored during matching. If there is only one match, the content inside the parentheses is also ignored. However, if there are multiple matches, the text inside the parentheses must be provided to identify the correct item.
 
 ### TV Show / Season / Episode
 ```
@@ -734,9 +734,7 @@ tvshow download farscape		(remote prefix · action — same idea, TV show instea
 
 ## 18. Pagination & scrolling — `bare` and `remote`
 
-*`page`/`pages` are interchangeable throughout this section. Bare `next`/`prev`/`forward`/`previous` (no number, no "page") and a bare number alone (like `21` or `45`) both follow the exact same fallback pattern explained in §2: the navigation/scroll action is tried first, and only falls back to a title search if it isn't available on the current page.
-
-Everywhere below, lines marked with a leading `*` are this **ultra-lazy, and slightly dangerous** variant — a single bare word or number with no "page" prefix. It's the fastest thing to type, but it's also the one most likely to accidentally land you on a movie titled the same thing instead of doing the navigation you meant, if the action isn't available on the page you're currently on. If that risk bothers you, just add `page` in front and it's always unambiguous.
+`page`/`pages` are interchangeable throughout this section. Lines marked with a leading `*` are the **ultra-lazy, and slightly dangerous** variant: a single bare word or number with no "page" prefix (`next`, `prev`, `up`, `down`, `top`, `bottom`, or a bare number like `21`/`45`). These follow the same fallback pattern from §2 — the navigation/scroll action is tried first, only falling back to a title search if it isn't available on the current page. It's the fastest thing to type, but also the one most likely to accidentally land you on a movie titled the same thing instead. If that risk bothers you, just add `page` in front and it's always unambiguous.
 
 ### Between library pages
 ```
