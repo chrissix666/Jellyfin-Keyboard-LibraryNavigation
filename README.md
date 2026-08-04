@@ -69,7 +69,7 @@ show		(remote · jump — same, singular)
 livetv		(remote · jump — Live TV library)
 pvr		(remote · jump — same, "pvr" instead)
 boxsets		(remote · jump — Collections library)
-holiday photos		(remote · jump — a custom-named library, exact name required)
+holiday photos		(remote · jump — a custom-named library, e.g. Home Videos & Photos, exact name required)
 ```
 
 ### Library tabs — only Movies, TV Shows, and Live TV have sub-tabs
