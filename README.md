@@ -317,7 +317,7 @@ Jumps to a cross-library list, independent of which library the tag/genre/studio
 Bare `random` is context-aware: it picks among whatever's actually relevant to where you currently are.
 
 ### Context-based — `bare`
-Bare `random` picks based on wherever you currently are — in a library: Movies, Series, Season, Set. If on Home, or the context is undefined, it picks from Movie/Series/Set combined.
+Bare `random` picks based on wherever you currently are — the whole Movies/TVShows/Collections library if you're on one of those library pages, a genre/studio/tag/person view (real server-side query across the entire list, matching how Jellyfin's own Shuffle button works, not limited to what's currently loaded on screen), or the current series/season/collection if you're on one of those detail pages. If on Home, or the context is undefined, it picks from Movie/Series/Collection combined. Manually-applied filters on top of a genre/studio/tag/person view are **not** taken into account — only the base view itself.
 ```
 random		(bare · jump — picks based on your current context, see above)
 play random / random play		(bare · play — same as above, but instead of just jumping to it, it also plays it)
