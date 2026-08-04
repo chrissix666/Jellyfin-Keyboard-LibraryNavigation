@@ -317,13 +317,27 @@ Jumps to a cross-library list, independent of which library the tag/genre/studio
 Bare `random` is context-aware: it picks among whatever's actually relevant to where you currently are.
 
 ### Context-based — `bare`
+Bare `random` looks at where you currently are and narrows the pool accordingly:
+
+- **Already inside the Movies library itself, no filter active** → random pick across the *entire* Movies library (same reach as `random movie`)
+- **Already inside the TV Shows library itself, no filter active** → random pick across the *entire* TV Shows library (same reach as `random tvshow`)
+- **Already inside the Collections library itself, no filter active** → random pick across the *entire* Collections library (same reach as `random collection`)
+- **A filter is active** on any of the above (e.g. `movies filter genre action`, then `random`) → the filter is respected: picks only among what's actually shown, not the whole library
+- **A filtered tag/genre list** (§7) → same idea, picks only among what's actually shown
+- **Inside a series, season, or collection detail page** → picks from within that specific item, as shown below
+- **From Home, or anywhere the context can't be determined** → falls back to combining all three types (Movie, Series, and Collection together)
 ```
-random		(bare · jump — from home, pick random movie or random show or random collection")
-play random		(bare · play — from home, played instead of just opened, random movie or random show or random collection)
+random		(bare · jump — inside the Movies library itself, no filter → random pick across the whole Movies library)
+play random		(bare · play — same pick, played instead of just opened)
+random		(bare · jump — inside the TV Shows library itself, no filter → random pick across the whole TV Shows library)
+random		(bare · jump — inside the Collections library itself, no filter → random pick across the whole Collections library)
+random		(bare · jump — inside Movies with a filter active, e.g. "movies filter genre action" → random pick only among the filtered results)
 random		(bare · jump — filtered tag/genre list → random pick among only what's shown)
 random		(bare · jump — inside a series, no season chosen → random episode from anywhere in the show)
 random		(bare · jump — inside one specific season → random episode from that season only)
 random		(bare · jump — inside a collection → random movie from it)
+random		(bare · jump — from Home, or anywhere the context is unclear → random pick combining Movie, Series, and Collection)
+play random		(bare · play — same idea, played instead of just opened)
 ```
 
 ### Explicit type words override the context
