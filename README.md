@@ -2,658 +2,503 @@
 
 A Tampermonkey/Violentmonkey userscript that lets you control Jellyfin entirely by typing. Start typing anywhere in the web UI (not while a video is playing, not while a real input field is focused) and press **Enter** to run a command, **Backspace** to edit, **Escape** to clear.
 
-Examples below use English original titles from a typical library (no edition/cut suffixes, no titles with their own keyboard aliases like "Star Trek"), so the examples show the parsing rules cleanly. Where a section allows lots of variation (aliases, singular/plural, swapped order), the examples deliberately repeat the same destination several times over, so you can see the whole space of valid phrasings at a glance.
+Every example line below is annotated with: whether it's **bare** (current page only) or **remote** (jumps from anywhere), whether it **jumps** or **plays**, and — where a line is a variation of the one above — what exactly changed. Titles and actors are deliberately varied line by line rather than repeated, so you can see the breadth of a real library reflected throughout.
 
 ---
 
 ## 1. Core concepts — read this first
 
 ### Scope tags used below
-- **`[current page]`** — only does something on the right kind of page you're already on
-- **`[remote]`** — works from anywhere; resolves the target and jumps to it first
-- **`[both]`** — works either way
+- **`bare`** — only does something on the right kind of page you're already on
+- **`remote`** — works from anywhere; resolves the target and jumps to it first
 
 ### The universal execution order
 ```
+armageddon sort name view banner letter a          (remote · jump+sort+view+letter · baseline)
+letter a armageddon sort name view banner            (remote · same result · only typed order changed)
+sort name armageddon letter a view banner             (remote · same result · typed order changed again)
+```
+```
 target → filter → view → sort → reset → play/shuffle/trailer/next-up/random/watched/favorite/submenu → letter
-```
-```
-stargate sg-1 sort name view banner letter s
-letter s stargate sg-1 sort name view banner        ← identical result
-sort name stargate sg-1 letter s view banner          ← identical result
-view banner letter s stargate sg-1 sort name           ← identical result
 ```
 
 ### Order-free vs. order-fixed vs. order-critical
-Most two-part commands are **order-free** (`gladiator play` = `play gladiator`). Some are **order-fixed**. And a few pairs are **order-critical**: both orders are valid, but mean two different things.
-
 > ⚠️ **`movies fav` ≠ `fav movies`**
-> - `movies fav` — library word first → jumps to the **Movies library's own "Favorites" tab** (inside `movies.html`)
-> - `fav movies` — favourite word first → jumps to the **global Favourites page's "Movies" section** (inside `home.html`'s Favourites view)
+> - `movies fav` (remote · jump) — library word first → the **Movies library's own "Favorites" tab**
+> - `fav movies` (remote · jump) — favourite word first → the **global Favourites page's "Movies" section**
 >
 > Same two words, both valid, two completely different destinations. See §2.
 
 ### The universal fallback pattern
-A handful of *bare* words are overloaded: they could be a page-navigation action, or the start of a title. The navigation action is always tried first; a title/folder search is the fallback if it isn't available:
+A handful of bare words are overloaded: page-navigation action first, title search as fallback. Real movie titles make this concrete:
 
-| Bare word | Tries first | Falls back to | Force the action | Force the title search |
+| Bare word | Tries first | Falls back to (real movie title) | Force the action | Force the title search |
 |---|---|---|---|---|
-| `M` | click letter **M** in the visible A–Z picker | search title/folder "M" | `letter M` | `movie M` |
-| `up` | scroll up (if the page has scrollable content) | search title/folder "Up" | `page up` | `movie up` |
-| `next` | click the next-page arrow (if enabled) | search title/folder "Next" | `page next` | `movie next` |
-| `65` | scroll to 65% of the page (if scrollable) | search title/folder "65" | `page 65` | `movie 65` |
-
-Prefixing with `page` always forces the navigation action; prefixing with a type word (`movie`, `tvshow`, `person`...) always forces a title/person search instead.
+| `M` | click letter **M** in the A–Z picker | search title/folder "M" (1931 film) | `letter M` | `movie M` |
+| `up` | scroll up (if scrollable) | search title/folder "Up" (2009 film) | `page up` | `movie up` |
+| `next` | click the next-page arrow (if enabled) | search title/folder "Next" (2007 film) | `page next` | `movie next` |
+| `9` | scroll to 9% of the page | search title/folder "9" (2009 film) | `page 9` | `movie 9` |
+| `65` | scroll to 65% of the page | search title/folder "65" (2023 film) | `page 65` | `movie 65` |
 
 ### Play vs. Resume vs. Replay
-- **On a movie or episode directly**: **Play** and **Resume** are the *same button*. **Replay** is a separate button that forces playback from the beginning, ignoring saved progress.
-- **On a series, season, or collection**: no separate replay state exists. `play`, `resume`, `replay` all click the one visible Play button; only `shuffle` differs.
+- **On a movie or episode directly**: Play and Resume are the same button. Replay forces a restart, ignoring saved progress.
+- **On a series, season, or collection**: no separate replay state exists — `play`, `resume`, `replay` all click the one visible Play button; only `shuffle` differs.
 - **Chapter/percent seeking** only makes sense once a specific movie or episode has been resolved — see §8.
 
 ---
 
-## 2. Navigating to a library — `[remote]` `Navigation`
+## 2. Navigating to a library — `remote` · jump
 
-| Library | All trigger words |
-|---|---|
-| Movies | `movies`, `movie`, `film`, `films` |
-| TV Shows | `shows`, `show`, `series`, `tvshow`, `tvshows`, `tv` |
-| Live TV | `livetv`, `live`, `pvr`, `live tv` |
-| Collections / Box Sets | `collections`, `collection`, `sets`, `set`, `boxsets`, `boxset` |
-| Home Videos | `homevideos`, `homevideo`, `home videos`, `home video` |
-| Music | `music`, `songs` |
+Also works with a library's own custom server name — including a renamed Photos/Home Videos library, since the script falls back to matching your library list by exact name.
 
-Any Movies or TV Shows alias lands you on that library's **own first tab** — enforced explicitly:
+**Movies**: `movies`, `movie`, `film`, `films` — all identical
+**TV Shows**: `tvshows`, `tvshow`, `tv`, `series`, `show`, `shows` — all identical
+**Live TV**: `livetv`, `live`, `pvr`, `live tv` — all identical
+**Collections / Box Sets**: `collections`, `collection`, `sets`, `set`, `boxsets`, `boxset` — all identical
+**Home Videos**: `homevideos`, `homevideo`, `home videos`, `home video` — all identical
+**Music**: `music`, `songs` — all identical
+
+Any Movies or TV Shows alias lands you on that library's own first tab (enforced explicitly, not left to the page's own memory):
 ```
-movies
-movie
-film
-films
-tvshows
-tv
-series
-show
-shows
-tvshow
-```
-```
-livetv          live          pvr          live tv
-collections     collection    sets         set          boxsets    boxset
+film                                 (remote · jump — Movies library, its own first tab)
+holiday photos                        (remote · jump — a custom-named library, exact name required)
 ```
 
-### Library tabs — `[both]` `Navigation`, order-fixed (library word first)
-```
-movies suggestions
-movie suggestions
-film suggestions
-films suggestions
-suggestions                     (already inside any Movies-family page)
+### Library tabs — only Movies, TV Shows, and Live TV have sub-tabs
+Order-fixed: library word first.
 
-tvshows upcoming
-tv upcoming
-series upcoming
-show upcoming
-upcoming                        (already inside TV Shows)
+**Movies tabs**: Movies (self) `movies`/`movie`/`film`/`films` · Suggestions `suggestions`/`suggestion` · Trailers `trailers`/`trailer` · Favorites `favorites`/`favourites`/`favourite`/`favorite`/`fav` · Collections `collections`/`collection`/`sets`/`set`/`boxsets`/`boxset` · Genres `genre`/`genres`
+**TV Shows tabs**: Shows (self) `shows`/`show`/`tvshows`/`tvshow` · Suggestions `suggestions`/`suggestion` · Upcoming `upcoming` · Genres `genre`/`genres` · TV Networks `tv networks`/`networks`/`studios`/`studio` · Episodes `episodes`/`episode`
+**Live TV tabs**: Programs `programs`/`program` · Guide `guide` · Channels `channels` · Recordings `recordings` · Schedule `schedule` · Series `series`
+
 ```
-```
-movies genre action
-movie genre action
-film genres action
-genre action                    (already inside Movies)
-genres action                   (already inside Movies)
+movies trailers                      (remote · jump — Movies library, Trailers tab)
+movie suggestions                     (remote · jump — Movies library, Suggestions tab, "movie" instead of "movies")
+trailer                                (bare · jump — same idea as above, already inside Movies)
+tvshows tv networks                     (remote · jump — TV Shows library, Networks tab)
+show tv networks                         (remote · jump — same, "show" instead of "tvshows")
+network                                    (bare · jump — same, already inside TV Shows)
+livetv guide                                (remote · jump — Live TV library, Guide tab)
+live guide                                   (remote · jump — same, "live" instead of "livetv")
+movies genre war                              (remote · jump — genre section within Movies)
+genres war                                     (bare · jump — same, already inside Movies)
 ```
 
-**movies**: `movies` (self, any alias), `suggestions`/`suggestion`, `trailers`/`trailer`, `favorites`/`favourites`/`favourite`/`favorite`/`fav`, `collections`/`collection`/`sets`/`set`/`boxsets`/`boxset`, `genre`/`genres`
-**tvshows**: `shows`/`show`/`tvshows`/`tvshow` (self, any alias), `suggestions`/`suggestion`, `upcoming`, `genre`/`genres`, `tv networks`/`tv network`/`networks`/`network`/`studios`/`studio`, `episodes`/`episode`
-**livetv**: `programs`/`program`, `guide`, `channels`, `recordings`, `schedule`, `series`
+### Genre overview screen — `bare`, special priority
+While the "Genres" tab is open, typing a listed genre's own name jumps straight into it — works bare (already on the tab) and remotely (`tvshows genre drama` from anywhere).
 
-### Genre overview screen — `[current page]` special priority
-While the "Genres" tab itself is open, any word matching a genre currently on screen wins priority over everything else — including `home`/`back`:
+### Returning to the series level — `bare`, from inside an episode or season
 ```
-action                → jumps into Action, if listed
-comedy                 → jumps into Comedy, if listed
-drama                    → jumps into Drama, if listed
-horror                    → jumps into Horror, if listed
-thriller                    → jumps into Thriller, if listed
-science fiction               → jumps into Science Fiction, if listed
-war                             → jumps into War, if listed
-home                             → no genre named "home" → falls through to Home navigation
-back                              → no genre named "back" → falls through to browser back
+main                                  (bare · jump — from an episode or season, back up to the series page)
+show main                              (bare · jump — same, "show" added, order swapped)
+main series                             (bare · jump — same, "series" instead of "show")
 ```
 
-### Home / Favourites — `[both]` `Navigation`
+### Home / Favourites
 ```
-favourites
-favorites
-favourite
-favorite
-fav
-```
-```
-fav movies
-fav shows
-fav episodes
-fav people
-fav collections
-fav videos
-```
-Force-jump to the global Favourites page, order-free, regardless of context:
-```
-home fav
-fav home
-home favourite
-favourite home
-home favorite
-favorite home
-home favorites
-favorites home
-home favourites
-favourites home
+favourites                           (remote · jump — global Favourites page)
+favorite                              (remote · jump — same, American singular)
+fav                                    (remote · jump — same, short form)
+fav movies                              (remote · jump — Favourites page's Movies section)
+fav shows                                (remote · jump — its TV Shows section)
+fav people                                (remote · jump — its People section)
+home fav                                   (remote · jump — force-jump, overrides context, see §1)
+fav home                                    (remote · jump — same, order swapped)
 ```
 
 ---
 
-## 3. Finding media — `[remote]` `Navigation`
+## 3. Finding media — `remote` · jump
 ```
-gladiator
-gladiator 2000
-inception
-interstellar
-saving private ryan
-die hard
-armageddon
-stargate
+gladiator                            (remote · jump — exact title)
+armageddon 1998                       (remote · jump — same idea, with a release year to disambiguate)
+con air                                (remote · jump — different movie)
+starship troopers                       (remote · jump — different movie)
 ```
-### Automatic title parsing
-Exact title → title with a trailing bracketed group stripped → title cut at a subtitle separator (`: `, ` - `, ` – `, ` — `). A trailing 4-digit number is tried both as part of the title and as a release-year filter.
+Exact title → title with a trailing bracketed group stripped → title cut at a subtitle separator. A trailing 4-digit number is tried both as part of the title and as a release-year filter.
 
-### Season / Episode — `[remote]` `Navigation`
+### Season / Episode
 ```
-falling skies season 2
-falling skies s2
-falling skies s02
-falling skies s2e1
-falling skies s02e01
-falling skies s2:e1
-falling skies specials            (= season 0)
-stargate sg-1 season 5
-stargate sg-1 s5e14
-stargate atlantis season 3
-stargate atlantis s3e1
+farscape season 2                    (remote · jump — full word)
+farscape s2                           (remote · jump — same, compact)
+stargate sg-1 s5e14                    (remote · jump — same show family, specific episode)
+stargate atlantis s02e01                (remote · jump — different show, leading zeros)
+babylon 5 specials                       (remote · jump — season 0)
 ```
-### Context shortcuts — `[current page]` `Navigation`, already inside a series/season/episode
+### Context shortcuts — `bare`, already inside a series/season/episode
 ```
-s2              season 2            ← identical, while inside a show
-s02              season 02           ← identical, while inside a show
-e1                episode 1           ← identical, while inside a season
-e01                episode 01          ← identical, while inside a season
-s2e1
-s02e01
-s2:e1
+s2                                    (bare · jump — Season 2, while inside the show)
+season 2                               (bare · jump — same, spelled out)
+e1                                       (bare · jump — Episode 1, while inside a season)
+s2e1                                      (bare · jump — Season 2 Episode 1 directly)
 ```
 
 ---
 
-## 4. Collections — `[remote]` `Navigation`, order-fixed (title, then collection word)
+## 4. Collections — `remote` · jump, order-fixed (title, then collection word)
 ```
-john wick collection
-john wick set
-mission impossible collection
-mission impossible saga
-dark knight collection
-dark knight saga
-harry potter collection
-harry potter filmreihe              (German)
+john wick collection                 (remote · jump — English)
+mission impossible set                (remote · jump — different collection, "set" instead of "collection")
+dark knight saga                        (remote · jump — different collection, "saga")
 ```
-Recognized suffix words, by language: `collection`, `anthology`, `saga`, `set` (English) · `filmreihe` (German) · `colecao` (Portuguese) · `coleccion` (Spanish) · `collectie` (Dutch) · `collezione` (Italian) · `kolekcja` (Polish) · `kolekce` (Czech) · `kolekcia` (Slovak) · `kolekcija` (Croatian) · `zbirka` (Slovenian) · `colectie` (Romanian) · `gyujtemeny` (Hungarian) · `kokoelma` (Finnish) · `samling` (Scandinavian) · `koleksiyon` (Turkish)
-
-`trilogy` is **not** currently recognized — only the words listed above.
+Recognized suffix words, by language: `collection`, `anthology`, `saga`, `set` (English) · `filmreihe` (German) · `colecao` (Portuguese) · `coleccion` (Spanish) · `collectie` (Dutch) · `collezione` (Italian) · `kolekcja` (Polish) · `kolekce` (Czech) · `kolekcia` (Slovak) · `kolekcija` (Croatian) · `zbirka` (Slovenian) · `colectie` (Romanian) · `gyujtemeny` (Hungarian) · `kokoelma` (Finnish) · `samling` (Scandinavian) · `koleksiyon` (Turkish). `trilogy` is **not** recognized.
 
 ---
 
-## 5. People — `[remote]` `Navigation`, order-free between the person word and the media-type word
+## 5. People — `remote` · jump, order-free between person word and media-type word
 
-**Person triggers** (10): `person`, `persons`, `actor`, `actors`, `actress`, `actresses`, `people`, `peoples`, `celebrity`, `celeb`
-**Media-type triggers**: `movie`, `movies`, `film`, `films` (movies) · `tvshow`, `tvshows`, `series`, `show`, `shows`, `tv` (TV shows) · `episode`, `episodes` (individual episode appearances)
+**Person triggers**: `person`, `persons`, `actor`, `actors`, `actress`, `actresses`, `people`, `peoples`, `celebrity`, `celeb`
+**Media-type triggers**: `movie`/`movies`/`film`/`films` · `tvshow`/`tvshows`/`series`/`show`/`shows`/`tv` · `episode`/`episodes`
 
+Profile pages, five different actors, five identical-in-structure phrasings:
 ```
-person keanu reeves
-persons keanu reeves
-actor keanu reeves
-actors keanu reeves
-celeb keanu reeves
+person tom hardy                     (remote · jump — profile page)
+persons cate blanchett                (remote · jump — same idea, plural word, different actress)
+actor idris elba                       (remote · jump — different word, different actor)
+actress charlize theron                 (remote · jump — different actress)
+celeb keanu reeves                       (remote · jump — short form, different actor)
 ```
-His movies — ten equivalent phrasings, mixing singular/plural and both word orders:
+Movies — ten equivalent-structure phrasings, mixing singular/plural and both orders, ten different actors:
 ```
-movies persons keanu reeves
-persons movies keanu reeves
-movie persons keanu reeves
-persons movie keanu reeves
-film person keanu reeves
-person film keanu reeves
-films actor keanu reeves
-actor films keanu reeves
-movies actors keanu reeves
-actors movies keanu reeves
+movies persons dwayne johnson        (remote · jump — his movies)
+persons movies jason statham          (remote · jump — order swapped, different actor)
+movie persons milla jovovich           (remote · jump — singular "movie", different actress)
+persons movie christian bale            (remote · jump — order swapped)
+film person henry cavill                 (remote · jump — "film"/"person" singular)
+person film hugh jackman                  (remote · jump — order swapped)
+films actor sandra bullock                 (remote · jump — "films"/"actor")
+actor films tom cruise                      (remote · jump — order swapped)
+movies actors scarlett johansson             (remote · jump — "actors" plural)
+actors movies leonardo dicaprio               (remote · jump — order swapped)
 ```
-Her TV appearances — same idea, a different actress:
+TV appearances — same pattern, ten more actors:
 ```
-tvshows actresses scarlett johansson
-actresses tvshows scarlett johansson
-show actress scarlett johansson
-actress show scarlett johansson
-shows actress scarlett johansson
-actress shows scarlett johansson
-series people scarlett johansson
-people series scarlett johansson
-tv peoples scarlett johansson
-peoples tv scarlett johansson
+tvshows actors matt damon            (remote · jump — his TV shows)
+actors tvshows will smith             (remote · jump — order swapped)
+show actor ryan reynolds               (remote · jump — singular "show"/"actor")
+actor show sylvester stallone           (remote · jump — order swapped)
+shows actress emily blunt                (remote · jump — "shows"/"actress")
+actress shows kate beckinsale             (remote · jump — order swapped)
+series people arnold schwarzenegger        (remote · jump — "series"/"people")
+people series harrison ford                 (remote · jump — order swapped)
+tv peoples samuel l jackson                  (remote · jump — "tv"/"peoples")
+peoples tv liam neeson                        (remote · jump — order swapped)
 ```
-His individual episode appearances:
+Individual episode appearances:
 ```
-episode celebrity tom hardy
-celebrity episode tom hardy
-episodes celeb tom hardy
-celeb episodes tom hardy
-episode actor tom hardy
-actor episode tom hardy
+episode celebrity chris evans        (remote · jump — his episode appearances)
+celebrity episode chris hemsworth     (remote · jump — order swapped, different actor)
+episodes celeb chris pratt              (remote · jump — plural "episodes"/"celeb")
+celeb episodes gerard butler             (remote · jump — order swapped)
 ```
 
 ---
 
-## 6. Tags, genres, studios — direct cross-library jump — `[remote]` `Navigation`, order-fixed (type word first)
+## 6. Tags, genres, studios — `remote` · jump, order-fixed (type word first)
 ```
-tag based on true events
-tags based on true events
-genre war
-genres war
-studio a24
+tag based on true events             (remote · jump — singular)
+tags war films                        (remote · jump — plural, different tag)
+genre war                              (remote · jump — a genre)
+genres science fiction                  (remote · jump — plural, different genre)
+studio a24                               (remote · jump — a studio)
 ```
 Jumps to a cross-library list, independent of which library the tag/genre/studio "belongs" to — unlike `movies genre war` (§2), which stays scoped to one library's own genre tab.
 
 ---
 
-## 7. Random — `[both]` `Navigation + Action`
+## 7. Random — `bare` and `remote` · jump or play
 
-Bare `random` (and `play random`) is **context-aware**: it picks among whatever's actually relevant to where you currently are.
+Bare `random` is context-aware: it picks among whatever's actually relevant to where you currently are.
 
-### Context-based, `[current page]`
+### Context-based — `bare`
 ```
-random                              (in a filtered/tag/genre list → random pick among what's actually shown)
-play random                         (same pick, played instead of just opened)
-random                              (inside a series, no season chosen → random episode from anywhere in the show)
-random                              (inside one specific season → random episode from that season only)
-random                              (inside a collection → random movie from it)
-random                              (on a plain library page, no filter → random pick across that whole library)
-```
-
-### Explicit type words override the context — `[both]`, override
-```
-random movie
-random show
-random collection
-random tvshow
-random film
-random series
-play random movie
-play random collection
-```
-Type words: `movie`/`movies`/`film`/`films` → Movie · `collection`/`collections`/`set`/`sets` → Collection · `show`/`shows`/`series`/`tvshow`/`tvshows`/`tv` → Series. With none of these words at all, all three types are combined.
-
-### With a specific title, `[remote]`, order-free between `random`/`play` and the title
-```
-falling skies random
-random falling skies
-play falling skies random
-play random falling skies
-falling skies play random
-random play falling skies
-john wick collection random
-random john wick collection
-play john wick collection random
-play random john wick collection
-```
-Force a random **season** instead of a random episode, or a random **movie** instead of the collection's default:
-```
-falling skies random season
-random season falling skies
-play falling skies random season
-john wick collection random movie          (redundant but valid)
+random                               (bare · jump — plain, unfiltered library page → queried across the *entire* library, same reach as "random movie"/"random show"/"random collection")
+play random                           (bare · play — same pick, played instead of just opened)
+random                                 (bare · jump — filtered tag/genre list → random pick among only what's shown)
+random                                  (bare · jump — inside a series, no season chosen → random episode from anywhere in the show)
+random                                   (bare · jump — inside one specific season → random episode from that season only)
+random                                    (bare · jump — inside a collection → random movie from it)
 ```
 
-### Nested random, `[both]`, two type words + `random` twice
+### Explicit type words override the context
 ```
-random tvshow random episode        (random show, then a random episode from anywhere in it)
-random tvshow random season         (random show, then a random season)
-random collection random movie      (random collection, then a random movie from inside it)
-play random tvshow random episode   (same, but plays the resulting episode directly)
-play random tvshow random season    (same, but clicks Play on that random season)
-play random collection random movie (same, but plays the resulting movie directly)
-play random tvshow                  (random show, Play button at series level — no episode resolved)
-play random collection              (random collection, Play button at collection level — no movie resolved)
+random movie                         (jump — random pick from all movies)
+random collection                     (jump — random pick from all collections)
+random tvshow                          (jump — random pick from all shows, "tvshow" instead of "show")
+play random film                        (play — random movie, played instead of opened, "film" instead of "movie")
+play random set                          (play — random collection, Play button clicked, "set" instead of "collection")
 ```
-Without `play`, nested random always jumps straight to the final item's own detail page.
 
-### Chapter & percent with random, `[both]`, only once a movie/episode is actually resolved
+### With a specific title — `remote`, order-free between `random`/`play` and the title
 ```
-play falling skies random chapter 3
-play random falling skies chapter 3
-play falling skies random season chapter 2
-play random tvshow random episode 50%
-play john wick collection random 50%
-play random collection random movie chapter 4
+farscape random                      (remote · jump — random episode of this show)
+random babylon 5                      (remote · jump — different show, order swapped)
+play stargate sg-1 random              (remote · play — random episode played)
+play random stargate atlantis           (remote · play — different show, order swapped)
+mission impossible collection random     (remote · jump — random movie of this specific collection)
+play random john wick collection          (remote · play — different collection, order swapped)
+```
+Force a random **season**, a random **movie**, or limit the pick to one **specific season**:
+```
+farscape random season               (remote · jump — random season page, not a random episode)
+play babylon 5 random season           (remote · play — different show, Play clicked on that random season)
+dark knight collection random movie      (remote · jump — redundant word, same as without "movie")
+stargate sg-1 random s2                    (remote · jump — random episode, but only from Season 2)
+play random stargate atlantis s3            (remote · play — different show/season, order swapped)
+```
+
+### Nested random — `bare` and `remote`, two type words + `random` twice
+```
+random tvshow random episode         (jump — random show, then a random episode from anywhere in it)
+random show random season             (jump — same idea, different word, a random season instead)
+random collection random movie         (jump — random collection, then a random movie from inside it)
+play random series random episode       (play — random show's random episode, played directly, "series" instead of "tvshow")
+play random set random movie             (play — random collection's random movie, played directly, "set" instead of "collection")
+play random tvshow                        (play — random show, Play button at series level, no nested pick)
+play random collection                     (play — random collection, Play button at collection level, no nested pick)
+```
+
+### Chapter & percent with random
+```
+play farscape random chapter 3       (remote · play — random episode, seeks to chapter 3)
+play random babylon 5 chapter 3       (remote · play — different show, order swapped)
+play stargate sg-1 random season chapter 2  (remote · play — random episode within a random season, seeks to chapter 2)
+play random tvshow random episode 50%         (play — random show's random episode, seeks to halfway)
+play dark knight collection random 50%          (remote · play — random movie of this collection, seeks to halfway)
 ```
 
 ---
 
-## 8. Playing — `Navigation + Action`, `[both]`, order-free
+## 8. Playing — `bare` and `remote`, order-free
 ```
-play gladiator
-gladiator play
-resume gladiator
-resume inception
-replay gladiator
-replay inception
-shuffle
+play gladiator                       (remote · play — baseline)
+armageddon play                       (remote · play — different movie, order swapped)
+resume con air                         (remote · play — same button as "play", see §1)
+replay starship troopers                (remote · play — different button, forces restart)
+shuffle                                  (bare · play — current page, not on a single movie or episode)
 ```
-`shuffle` only exists at Collection/Series/Season level and library/list views — not on an individual movie or episode.
 ```
-falling skies season 2 play
-s2 play                                 (while already inside the show)
-falling skies shuffle
-shuffle falling skies
+farscape season 2 play               (remote · play — Play button on that season)
+s2 play                               (bare · play — same idea, while already inside the show)
+babylon 5 shuffle                       (remote · play — Shuffle button on that show's page)
+shuffle stargate sg-1                    (remote · play — different show, order swapped)
 ```
 
-### Context-aware play, no title needed once you're already there — `[both]`
+### Context-aware play — `bare` and `remote`, no title needed once you're already there
 ```
-play                                    (bare — plays whatever you're already viewing)
-play s2                                 (bare, inside a show — first unwatched episode of Season 2, or from the start)
-play e3                                 (bare, inside a season — plays Episode 3 directly)
-play s2e3                               (bare, inside a show — plays that specific episode directly)
-play falling skies                      (remote — first unwatched episode, or from the beginning)
-play falling skies s2                   (remote — first unwatched episode of that season, or from the start)
-play stargate sg-1
-play stargate sg-1 s5
-play stargate atlantis
-play stargate atlantis s3
+play                                  (bare · play — whatever you're already viewing)
+play s2                                (bare · play — inside a show, Season 2: first unwatched episode, or from the start)
+play e3                                 (bare · play — inside a season, Episode 3 directly)
+play s2e3                                (bare · play — inside a show, that specific episode directly)
+play farscape                             (remote · play — the whole show: first unwatched episode, or from the beginning)
+play stargate atlantis s3                  (remote · play — that season: first unwatched episode, or from the season's start)
 ```
 
-### Chapter & percent seeking — `[both]`, movies/episodes only
+### Chapter & percent seeking — `bare` and `remote`, movies/episodes only
 ```
-play gladiator chapter 3
-play gladiator chaptername
-play gladiator 0%
-play gladiator 50%
-play gladiator 100%                     (capped down to 99%)
-play falling skies s2e1 chapter 2
-play stargate sg-1 s5e14 chapter 1
-play stargate atlantis s3e1 50%
-play chapter 3                          (bare — seeks in the movie/episode you're already on)
-play 75%                                (bare — seeks in the movie/episode you're already on)
+play gladiator chapter 3             (remote · play — jump to chapter number 3)
+play armageddon chaptername           (remote · play — by the chapter's actual name instead of a number — needs a file with named chapters in its metadata)
+play con air 0%                        (remote · play — the very start, equivalent to a forced replay)
+play starship troopers 50%              (remote · play — the halfway point)
+play sphere 100%                         (remote · play — capped down to 99%, to avoid landing past the end)
+play babylon 5 s2e1 chapter 2               (remote · play — specific episode, by chapter number)
+play chapter 3                               (bare · play — seeks in the movie/episode you're already on)
+play 75%                                      (bare · play — seeks in the movie/episode you're already on)
 ```
 
-### Trailer — `[both]`, order-free, position-free
+### Trailer — `bare` and `remote`, order-free, position-free
 ```
-play trailer gladiator
-gladiator play trailer
-trailer play gladiator
-gladiator trailer play
-play gladiator trailer
-trailer gladiator play
-play trailer inception
-inception trailer play
-trailer / play trailer / trailer play    (bare, current page)
+play trailer gladiator               (remote · play — baseline)
+armageddon play trailer               (remote · play — different movie, title moved to the front)
+trailer play con air                   (remote · play — different movie, "trailer" moved to the front)
+starship troopers trailer play          (remote · play — different movie, "play" moved to the end)
+trailer / play trailer / trailer play    (bare · play — current page, all three identical)
 ```
-Works on movies, series, seasons, collections — not individual episodes.
+Works on movies, series, seasons, and collections directly — not on individual episodes:
+```
+farscape trailer                     (remote · play — trailer at series level)
+babylon 5 season 2 trailer            (remote · play — trailer at that specific season's level)
+john wick collection trailer            (remote · play — trailer at collection level)
+```
 
-### Next Up — `[both]`, order-free, position-free
+### Next Up — `bare` and `remote`, order-free, position-free
 ```
-next up                                 (bare)
-play next up
-falling skies next up
-next up falling skies
-play falling skies next up
-play next up falling skies
-falling skies play next up
-falling skies next up play
-stargate sg-1 next up
-play stargate sg-1 next up
+next up                              (bare · jump — Next Up episode on the series page you're on)
+play next up                          (bare · play — same episode, played directly)
+farscape next up                        (remote · jump — remote version)
+play stargate sg-1 next up               (remote · play — different show, played)
+babylon 5 play next up                    (remote · play — different show, "play" moved to the middle)
 ```
 
 ---
 
-## 9. Filter — `[both]` `Action`
+## 9. Filter — `bare` and `remote`
 ```
 filter <category> <value> <category> <value> ...
 ```
-
-| Category word(s) | Filters |
-|---|---|
-| `genre` / `genres` | Genre |
-| `year` / `years` | Production year |
-| `tag` / `tags` | Tag |
-| `rating` / `ratings` | Parental rating |
-| `feature` / `features` | see below |
-| `video type` / `video types` | see below |
-| `filter` / `filters` | see below |
-
 **`filter` values**: `played`, `unplayed`, `resumable`/`continue`/`continue watching`, `favorite`/`favorites`/`favourite`/`favourites`/`fav`
-**`feature` values**: `subtitle`/`subtitles`, `trailer`/`trailers`, `special feature`/`special features`/`extra`/`extras`, `theme song`/`theme songs`, `theme video`/`theme videos`
-**`video type` values**: `hd`, `sd`, `4k`, `3d`, `bd`/`bluray`/`blu-ray`, `dvd`
-
+**`feature` values**: `subtitle`/`subtitles`, `trailer`/`trailers`, `special feature`/`special features`, `theme song`/`theme songs`, `theme video`/`theme videos`
+**`video type` values**: `hd`, `sd`, `4k`, `3d`, `bd`/`bluray`, `dvd`
 ```
-filter genre war year 1998
-filter genre action
-filter feature trailer
-filter video type 4k
-filter rating pg-13
-movies filter genre action
-movies filter genre war rating r
-tag based on true events filter feature trailer
+filter genre war year 1998           (bare/remote · two categories at once)
+movies filter genre action             (remote · jump then filter)
+tag based on true events filter feature trailer  (remote · jump then filter, combined with a tag lookup)
 ```
 
-### Reset — `[both]`
+### Reset
 ```
-reset filters
-movies reset filters
-reset filters rating pg-13
+reset filters                        (bare/remote · clears every active filter)
+movies reset filters                  (remote · jump then reset)
+reset filters rating pg-13             (bare/remote · removes only that one filter)
 ```
 
 ---
 
-## 10. Sort & View — `[both]` `Action`
-```
-sort <sort-by> <order>
-```
+## 10. Sort & View — `bare` and `remote`
 **Order**: `ascending`, `descending`
-**Everywhere**: `name`, `community rating`/`communityrating`, `date added`/`dateadded`, `date played`/`dateplayed`, `parental rating`/`parentalrating`, `release date`/`releasedate`
-**Movies only**: `critics rating`/`criticsrating`, `play count`/`playcount`, `runtime`, `random`
-**TVShows only**: `date episode added`/`dateepisodeadded`
+**Everywhere**: `name`, `community rating`, `date added`, `date played`, `parental rating`, `release date`
+**Movies only**: `critics rating`, `play count`, `runtime`, `random`
+**TVShows only**: `date episode added`
 **List views only**: `folders`
-**Collections tab specifically**: only `name`, `community rating`, `date added`, `parental rating`, `release date`.
 ```
-sort name
-sort community rating
-sort community rating descending
-sort ascending
-sort descending
+sort name                            (bare/remote · applies sort)
+sort community rating descending      (bare/remote · sort-by + order together)
+sort ascending                         (bare/remote · order only)
 ```
-
+**Movies/TVShows view**: `banner`, `list`, `poster`, `poster card`, `thumb`, `thumb card`
+**List views**: `primary`, `banner`, `disc`, `logo`, `thumb`, `list`, plus `show title`
 ```
-view <value(s)>
-```
-**Movies/TVShows**: `banner`, `list`, `poster`, `poster card`/`postercard`, `thumb`, `thumb card`/`thumbcard`
-**List views**: `primary`, `banner`, `disc`, `logo`, `thumb`, `list`, plus `show title`/`show the title`
-```
-view poster
-view banner
-view list
-view primary
-view primary show title
+view poster                          (bare/remote · applies view)
+view primary show title               (bare/remote · view + the "show title" checkbox together)
 ```
 
 ---
 
-## 11. Watched — `[both]` `Action`, fully unified: 15 sentence patterns × 4 word spellings
-
-**Sentence patterns** (15): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`
-**Word spellings** (4): `watched`, `unwatched`, `played`, `unplayed`
-Plus each spelling works entirely bare. 64 total.
+## 11. Watched — `bare` and `remote`, 15 sentence patterns × 4 word spellings (64 total)
 ```
-watched
-played
-mark as watched
-mark played
-set watched
-unset from played
-toggle watched
-add to unwatched
-remove unplayed
-unmark from unwatched
+watched                               (toggle · bare — no pattern needed)
+played                                  (toggle · bare — different spelling, same meaning)
+mark as unwatched                         (toggle · bare — full pattern, negated)
+set unplayed                                (toggle · bare — shorter pattern)
 ```
 ```
-watched gladiator
-gladiator watched
-mark played inception
-inception mark played
-toggle watched stargate sg-1
-stargate sg-1 toggle watched
+watched gladiator                    (remote prefix · toggle)
+armageddon watched                    (remote suffix · toggle — different movie, order swapped)
+mark played con air                     (remote prefix · toggle — different pattern, different movie)
+starship troopers mark played             (remote suffix · toggle — order swapped)
 ```
 
 ---
 
-## 12. Favorite — `[both]` `Action`, fully unified: 15 sentence patterns × 5 word spellings
-
-**Word spellings** (5): `favorite`, `favourite`, `favorites`, `favourites`, `fav`. 75 total.
+## 12. Favorite — `bare` and `remote`, 15 sentence patterns × 5 word spellings (75 total)
 ```
-add to favorite
-add to favourites
-delete from fav
-mark as favourite
-set favorite
-unmark from favorites
-unset fav
-remove favourite
-toggle favorites
-toggle fav
+add to favorite                      (toggle · bare — American singular)
+add to favourites                       (toggle · bare — same pattern, British plural)
+add to fav                                (toggle · bare — same pattern, short form)
 ```
 ```
-mark fav gladiator
-gladiator mark fav
-add to favorite inception
-inception add to favorite
-toggle favourite stargate atlantis
-stargate atlantis toggle favourite
+mark fav gladiator                   (remote prefix · toggle)
+armageddon mark fav                    (remote suffix · toggle — different movie, order swapped)
+toggle favourite con air                 (remote prefix · toggle — different pattern, different movie)
+starship troopers toggle favourite          (remote suffix · toggle — order swapped)
 ```
 
 ---
 
-## 13. Submenu actions — `[both]` `Action`
+## 13. Submenu actions — `bare` and `remote`
 ```
-download                   download all
-add to collection           addtocollection
-add to playlist             addtoplaylist
-copy stream url             copystreamurl
-edit metadata                editmetadata
-edit images                  editimages
-edit subtitles                editsubtitles
-identify
-media info                    mediainfo
-refresh metadata               refreshmetadata
+download                             (bare · triggers download — startsWith match, also catches "Download All" on series/seasons)
+addtocollection                        (bare · squashed spelling of "add to collection")
+media info
 share
 delete
 ```
 ```
-download
-gladiator download
-download gladiator
-download falling skies s2e1
-media info inception
-inception mediainfo
-share stargate sg-1
-stargate sg-1 share
+gladiator download                   (remote suffix · action)
+download armageddon                   (remote prefix · action — different movie, order swapped)
+download farscape s2e1                  (remote prefix · action — combined with a season/episode target)
+con air mediainfo                         (remote suffix · action — squashed spelling)
 ```
 
 ---
 
-## 14. A–Z letter picker — `[both]`
+## 14. A–Z letter picker — `bare` and `remote`
 ```
-a                                        (bare — see the fallback table in §1)
-letter a
-letter b
-letter #
-tag based on true events letter s
-movies letter g
-tvshows letter s
-letter s movies
+a                                     (bare · jump — see the fallback table in §1)
+letter a                              (bare · jump — forced, no fallback ambiguity)
+letter #                               (bare · jump — non-alphabetic entries)
+tag based on true events letter s        (remote · jump — combinable, runs last regardless of typed position)
+m                                          (bare · tries the letter picker first, falls back to the movie titled "M")
+movie m                                     (bare · forces the title search, skips the letter picker)
+9                                             (bare · tries a percent-scroll first, falls back to the movie titled "9")
+movie 9                                        (bare · forces the title search for "9")
 ```
 
 ---
 
-## 15. Pagination & scrolling — `[both]` `Action`
+## 15. Pagination & scrolling — `bare` and `remote`
 
-`page`/`pages` are interchangeable throughout.
+`page`/`pages` are interchangeable throughout. Bare `next`/`prev`/`forward`/`previous` and a bare number alone follow the same fallback pattern as §1:
+```
+next                                 (bare · tries the next-page arrow first, falls back to the movie titled "Next")
+movie next                            (bare · forces the title search, skips the arrow)
+up                                      (bare · tries scrolling up first, falls back to the movie titled "Up")
+movie up                                 (bare · forces the title search for "Up")
+65                                          (bare · tries scrolling to 65% first, falls back to the movie titled "65")
+movie 65                                     (bare · forces the title search for "65")
+```
 
 ### Between library pages
 ```
-next page          page next          forward page          page forward
-previous page       page previous       prev page             page prev
-back page            page back
-page first            first page
-page last              last page
+next page                            (bare/remote · forced page-navigation)
+page next                             (bare/remote · same, order swapped)
+forward page                           (bare/remote · same, "forward" instead of "next")
+previous page                            (bare/remote · the other direction)
+prev page                                 (bare/remote · same, shorter word)
+back page                                  (bare/remote · same as "previous page" — not the same as bare "back" in §16)
+page first                                  (bare/remote · clicks "previous" repeatedly until disabled)
+last page                                     (bare/remote · clicks "next" repeatedly until disabled)
 ```
+Multiple jumps at once — number and direction word in either order, `page`/`pages` optional:
 ```
-next 3           3 next            page next 3          3 pages next
-prev 5            5 prev            pages prev 2           2 pages prev
-next 10            10 pages next
-prev 8              8 pages prev
+next 3                               (bare/remote · clicks "next" three times, 500ms apart)
+3 next                                (bare/remote · same, order swapped)
+page next 3                            (bare/remote · same, "page" added, no effect on the outcome)
+prev 5                                   (bare/remote · same idea, other direction)
 ```
 
 ### Within a page
 ```
-page top       top page       page bottom       bottom page
-page down       down page       page up       up page
-page 50          page 50%
+page top                             (bare/remote · forced, instant jump, no animation)
+page bottom                           (bare/remote · the other end)
+page down                               (bare/remote · one screen-height down)
+page up                                  (bare/remote · one screen-height up)
+page 50                                    (bare/remote · 50% down the page, % sign optional)
 ```
+Multiple scroll-screens at once, pure client-side scrolling:
 ```
-34 down           down 21           12 pages down           pages down 7
-50 up               up 50
-```
-
-### Auto-scroll
-```
-scroll
-scroll slow        scroll slower        slow scroll        slower scroll
-scroll fast          scroll faster        fast scroll         faster scroll
-scroll delay 5
-stop        stop scroll        scroll stop
+34 down                              (bare/remote · 34 screen-heights down in one jump)
+down 21                               (bare/remote · same idea, order swapped, different count)
+12 pages down                          (bare/remote · same, "pages" plural)
 ```
 
----
-
-## 16. Miscellaneous — `[current page]` unless noted
+### Auto-scroll — `bare`, keeps running until stopped
 ```
-search alien          find alien
-reload         refresh         reset
-back
-fullscreen
-window        windowed
+scroll                               (bare · starts at medium speed)
+scroll slow                           (bare · starts/switches to slow speed)
+scroll fast                            (bare · starts/switches to fast speed)
+scroll delay 5                          (bare · sets a 5-second pause before restarting at the top — only sets the value)
+stop                                      (bare · stops the auto-scroll)
 ```
 
 ---
 
-## 17. Exceptions, overrides, and bugs fixed along the way
-
-**Genre-overview priority override** (§2): the one screen where a plain word can outrank reserved words like `home`/`back`/`movies` — a fast, local DOM lookup rather than a network call.
-
-**`movies`/`tvshows` force an explicit tab click**: the script explicitly clicks the "Movies"/"Shows" tab after navigating, rather than trusting the page's own remembered default.
-
-**Stale/duplicate DOM elements**: pagination arrows, the filter-dialog close button, and A–Z letters can briefly exist twice on a page. Every click scans *all* matches and picks the first genuinely visible, enabled one.
-
-**Collections tab has its own Sort dialog**: different underlying values than the regular Movies sort dialog — detected automatically by the active tab.
-
-**Keyboard capture phase**: the script listens in the capture phase, not the default bubble phase, so it reliably receives input even where Jellyfin's own components might otherwise intercept it first.
-
-**`played`/`unplayed` vs. the Filter feature**: filter parsing always runs before action-word parsing, so `played` safely works both as a filter value and as a standalone watched-toggle.
-
-**Folder names that collide with a feature word**: the script tries a matching folder/photo-album on your current page before falling back to the word's usual meaning.
+## 16. Miscellaneous — `bare` unless noted
+```
+search alien                         (bare/remote · opens the search results for "alien")
+find gladiator                        (bare/remote · same, different trigger word, different title)
+reload                                 (bare · reloads the current page)
+back                                     (bare · the browser's own back button — not "back page"/"page back" in §15, which page-navigates instead)
+fullscreen                               (bare · enters fullscreen)
+windowed                                  (bare · exits fullscreen)
+```
