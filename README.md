@@ -26,9 +26,7 @@ MIT
 
 ---
 
-Every example line below is annotated with: whether it's **bare** (current page only) or **remote** (jumps from anywhere), whether it **jumps** or **plays**, and — where a line is a variation of the one above — what exactly changed. Titles and actors are deliberately varied line by line rather than repeated, so you can see the breadth of a real library reflected throughout.
-
-## 0. Configuration
+## 1. Configuration
 
 These are the settings at the very top of the script itself — edit them directly in the `.js` file before installing, or in the JavaScript Injector's script editor afterward.
 
@@ -36,7 +34,7 @@ These are the settings at the very top of the script itself — edit them direct
 |---|---|---|
 | `idleResetMs` | `2500` | Milliseconds of inactivity before the typed buffer resets on its own |
 | `minLength` | `1` | Minimum number of characters required before pressing Enter runs anything |
-| `preventSpaceScroll` | `true` | Blocks the page from scrolling when you press spacebar (so spaces in commands don't also scroll the page) |
+| `preventSpaceScroll` | `"smart"` | Controls spacebar behavior: `true` always blocks the page from scrolling on spacebar, `false` never blocks it, `"smart"` (default) only blocks it once you've already started typing a command — an empty buffer lets spacebar scroll the page completely normally, exactly like vanilla Jellyfin |
 | `showIndicator` | `true` | Shows the small on-screen overlay of what you've typed so far |
 | `indicatorCorner` | `"top-center"` | Where the overlay is anchored: `top-left`, `top-right`, `bottom-left`, `bottom-right`, `top-center`, `center-center`, `bottom-center` |
 | `indicatorOffsetX` | `"0vw"` | Extra horizontal offset from that corner, in `vw` (percent of window width) — resolution-independent |
@@ -45,7 +43,9 @@ These are the settings at the very top of the script itself — edit them direct
 
 ---
 
-## 1. Core concepts — read this first
+Every example line below is annotated with: whether it's **bare** (current page only) or **remote** (jumps from anywhere), whether it **jumps** or **plays**, and — where a line is a variation of the one above — what exactly changed. Titles and actors are deliberately varied line by line rather than repeated, so you can see the breadth of a real library reflected throughout.
+
+## 2. Core concepts — read this first
 
 ### Scope tags used below
 - **`bare`** — only does something on the right kind of page you're already on
@@ -66,7 +66,7 @@ sort name armageddon letter a view banner		(remote · same result · typed order
 > - `movies fav` (remote · jump) — library word first → the **Movies library's own "Favorites" tab**
 > - `fav movies` (remote · jump) — favourite word first → the **global Favourites page's "Movies" section**
 >
-> Same two words, both valid, two completely different destinations. See §2.
+> Same two words, both valid, two completely different destinations. See §3.
 
 ### The universal fallback pattern
 A handful of bare words are overloaded: page-navigation action first, title search as fallback. Real movie titles make this concrete:
@@ -82,11 +82,11 @@ A handful of bare words are overloaded: page-navigation action first, title sear
 ### Play vs. Resume vs. Replay
 - **On a movie or episode directly**: Play and Resume are the same button. Replay forces a restart, ignoring saved progress.<br>
 - **On a series, season, or collection**: no separate replay state exists — `play`, `resume`, `replay` all click the one visible Play button; only `shuffle` differs.<br>
-- **Chapter/percent seeking** only makes sense once a specific movie or episode has been resolved — see §8.<br>
+- **Chapter/percent seeking** only makes sense once a specific movie or episode has been resolved — see §9.<br>
 
 ---
 
-## 2. Navigating to a library — `remote` · jump
+## 3. Navigating to a library — `remote` · jump
 
 Also works with a library's own custom server name — including a renamed Photos/Home Videos library, since the script falls back to matching your library list by exact name.
 
@@ -170,7 +170,7 @@ While the "Home Favourites" tab is open, typing a listed Sub (movies, shows, epi
 
 Force-jump to the global Favourites page, order-free, ten equivalent phrasings:
 ```
-home fav		(remote · jump — force-jump, overrides context, see §1)
+home fav		(remote · jump — force-jump, overrides context, see §2)
 fav home		(remote · jump — same, order swapped)
 home favourite		(remote · jump — same, singular spelling)
 favourite home		(remote · jump — same, order swapped)
@@ -185,7 +185,7 @@ favourites home		(remote · jump — same, order swapped)
 
 ---
 
-## 3. Finding media — `remote` · jump
+## 4. Finding media — `remote` · jump
 
 The year and the library distinction between Movie or TV Show are purely optional. However, they are useful for differentiation if there are two identical matches, because if the match is not unambiguous, no match will be returned.<br>
 <br>
@@ -229,7 +229,7 @@ s2e1		(bare · jump — Season 2 Episode 1 directly)
 
 ---
 
-## 4. Collections — `remote` · jump, order-fixed (title, then collection word)
+## 5. Collections — `remote` · jump, order-fixed (title, then collection word)
 ```
 john wick collection		(remote · jump — English)
 mission impossible set		(remote · jump — different collection, "set" instead of "collection")
@@ -240,7 +240,7 @@ Recognized suffix words, by language: `collection`, `anthology`, `saga`, `set` (
 
 ---
 
-## 5. People — `remote` · jump, order-free between person word and media-type word
+## 6. People — `remote` · jump, order-free between person word and media-type word
 
 **Person triggers**: `person`, `persons`, `actor`, `actors`, `actress`, `actresses`, `people`, `peoples`, `celebrity`, `celeb`<br>
 **Media-type triggers**:<br>
@@ -292,7 +292,7 @@ celeb episodes gerard butler		(remote · jump — order swapped)
 
 ---
 
-## 6. Tags, genres, studios — `remote` · jump, order-fixed (type word first)
+## 7. Tags, genres, studios — `remote` · jump, order-fixed (type word first)
 ```
 tag based on true events		(remote · jump — singular, cross-library list)
 tags war films		(remote · jump — plural, different tag, cross-library list)
@@ -300,11 +300,11 @@ genre war		(remote · jump — a genre, cross-library list, both Movies & TV Sho
 genres science fiction		(remote · jump — plural, different genre, cross-library list, both Movies & TV Shows)
 studio a24		(remote · jump — a studio, cross-library list, both Movies & TV Shows)
 ```
-Jumps to a cross-library list, independent of which library the tag/genre/studio "belongs" to — unlike `movies genre war` (§2), which stays scoped to one library's own genre tab.
+Jumps to a cross-library list, independent of which library the tag/genre/studio "belongs" to — unlike `movies genre war` (§3), which stays scoped to one library's own genre tab.
 
 ---
 
-## 7. Random — `bare` and `remote` · jump or play
+## 8. Random — `bare` and `remote` · jump or play
 
 Bare `random` is context-aware: it picks among whatever's actually relevant to where you currently are.
 
@@ -387,11 +387,11 @@ play dark knight collection random 50%		(remote · play — random movie of this
 
 ---
 
-## 8. Playing — `bare` and `remote`, order-free
+## 9. Playing — `bare` and `remote`, order-free
 ```
 play gladiator		(remote · play — baseline)
 armageddon play		(remote · play — different movie, order swapped)
-resume con air		(remote · play — same button as "play", see §1)
+resume con air		(remote · play — same button as "play", see §2)
 starship troopers resume		(remote · play — same, order swapped)
 replay pearl harbor		(remote · play — different button, forces restart)
 blade replay		(remote · play — same, order swapped)
@@ -460,7 +460,7 @@ babylon 5 play next up		(remote · play — different show, "play" moved to the 
 
 ---
 
-## 9. Filter — `bare` and `remote`
+## 10. Filter — `bare` and `remote`
 ```
 filter <category> <value> <category> <value> ...
 ```
@@ -496,7 +496,7 @@ reset filters year 1998 rating r		(bare/remote · removes two specific filters, 
 
 ---
 
-## 10. Sort — `bare` and `remote`
+## 11. Sort — `bare` and `remote`
 ```
 sort <sort-by> <order>
 ```
@@ -525,7 +525,7 @@ tvshows sort date episode added		(remote · jump to TV Shows, then sort — TVSh
 
 ---
 
-## 11. View — `bare` and `remote`
+## 12. View — `bare` and `remote`
 ```
 view <value(s)>
 ```
@@ -548,9 +548,9 @@ tvshow view list		(remote · jump to TV Shows, then view — TV Shows instead)
 
 ---
 
-## 12. A–Z letter picker — `bare` and `remote`
+## 13. A–Z letter picker — `bare` and `remote`
 ```
-a		(bare · jump — see the fallback table in §1)
+a		(bare · jump — see the fallback table in §2)
 letter a		(bare · jump — forced, no fallback ambiguity)
 letter b		(bare · jump — different letter)
 letter #		(bare · jump — non-alphabetic entries)
@@ -559,7 +559,7 @@ movies letter g		(remote · jump — jump to Movies, then to letter G)
 movie letter g		(remote · jump — same, singular "movie" instead)
 tvshow letter f		(remote · jump — same idea, TV Shows instead)
 ```
-The same fallback pattern from §1, with its two dedicated real-movie examples:
+The same fallback pattern from §2, with its two dedicated real-movie examples:
 ```
 m		(bare · tries the letter picker first, falls back to the movie titled "M")
 movie m		(bare · forces the title search, skips the letter picker entirely)
@@ -569,9 +569,9 @@ movie 9		(bare · forces the title search for "9")
 
 ---
 
-## 13. Combining view, sort, filter, and letter
+## 14. Combining view, sort, filter, and letter
 
-All four can be combined in one line, in any typed order — the script always executes them in the fixed order from §1 (filter → view → sort → ... → letter), regardless of how you typed them:
+All four can be combined in one line, in any typed order — the script always executes them in the fixed order from §2 (filter → view → sort → ... → letter), regardless of how you typed them:
 ```
 movies view banner sort name letter g		(remote · jump, then view, then sort, then letter)
 movies letter g sort name view banner		(remote · same result, typed in reverse)
@@ -608,7 +608,7 @@ movies reset filters genre action		(remote · jump to Movies, then remove just t
 
 ---
 
-## 14. Watched — `bare` and `remote`, fully unified: 15 sentence patterns × 4 word spellings
+## 15. Watched — `bare` and `remote`, fully unified: 15 sentence patterns × 4 word spellings
 
 **Sentence patterns** (15, all identical in meaning): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`<br>
 **Word spellings** (4, all identical in meaning): `watched`, `unwatched`, `played`, `unplayed`<br>
@@ -649,7 +649,7 @@ mark played movie armageddon 1998		(remote prefix · toggle — "movie" prefix p
 
 ---
 
-## 15. Favorite — `bare` and `remote`, fully unified: 15 sentence patterns × 5 word spellings
+## 16. Favorite — `bare` and `remote`, fully unified: 15 sentence patterns × 5 word spellings
 
 **Sentence patterns** (15, identical set to Watched): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`<br>
 **Word spellings** (5, all identical in meaning): `favorite`, `favourite`, `favorites`, `favourites`, `fav`<br>
@@ -688,7 +688,7 @@ add to fav movie armageddon 1998		(remote prefix · toggle — "movie" prefix pl
 
 ---
 
-## 16. Submenu actions — `bare` and `remote`
+## 17. Submenu actions — `bare` and `remote`
 ```
 download		(bare · triggers download)
 download all		(bare · same, "all" added — startsWith match, catches Jellyfin's own "Download All" button on series/seasons)
@@ -731,9 +731,9 @@ tvshow download farscape		(remote prefix · action — same idea, TV show instea
 
 ---
 
-## 17. Pagination & scrolling — `bare` and `remote`
+## 18. Pagination & scrolling — `bare` and `remote`
 
-*`page`/`pages` are interchangeable throughout this section. Bare `next`/`prev`/`forward`/`previous` (no number, no "page") and a bare number alone (like `21` or `45`) both follow the exact same fallback pattern explained in §1: the navigation/scroll action is tried first, and only falls back to a title search if it isn't available on the current page.
+*`page`/`pages` are interchangeable throughout this section. Bare `next`/`prev`/`forward`/`previous` (no number, no "page") and a bare number alone (like `21` or `45`) both follow the exact same fallback pattern explained in §2: the navigation/scroll action is tried first, and only falls back to a title search if it isn't available on the current page.
 
 Everywhere below, lines marked with a leading `*` are this **ultra-lazy, and slightly dangerous** variant — a single bare word or number with no "page" prefix. It's the fastest thing to type, but it's also the one most likely to accidentally land you on a movie titled the same thing instead of doing the navigation you meant, if the action isn't available on the page you're currently on. If that risk bothers you, just add `page` in front and it's always unambiguous.
 
@@ -749,7 +749,7 @@ previous page		(bare/remote · the other direction)
 page previous		(bare/remote · same, order swapped)
 prev page		(bare/remote · same, shorter word)
 page prev		(bare/remote · same, order swapped)
-back page		(bare/remote · same as "previous page" — not the same as bare "back" in §18)
+back page		(bare/remote · same as "previous page" — not the same as bare "back" in §19)
 page back		(bare/remote · same, order swapped)
 page first		(bare/remote · clicks "previous" repeatedly until disabled — jumps to page 1)
 first page		(bare/remote · same, order swapped)
@@ -816,13 +816,13 @@ scroll stop		(bare · same, order swapped)
 
 ---
 
-## 18. Miscellaneous — `bare` unless noted
+## 19. Miscellaneous — `bare` unless noted
 ```
 search alien		(bare/remote · opens the search results for "alien")
 find gladiator		(bare/remote · same, different trigger word, different title)
 reload		(bare · reloads the current page)
 refresh		(bare · same, different word)
-back		(bare · the browser's own back button — not the same as "back page"/"page back" in §17, which page-navigates instead)
+back		(bare · the browser's own back button — not the same as "back page"/"page back" in §18, which page-navigates instead)
 fullscreen		(bare · enters fullscreen)
 window		(bare · exits fullscreen)
 windowed		(bare · same, different word)
