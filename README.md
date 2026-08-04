@@ -147,6 +147,7 @@ main series		(bare · jump — same, "series" instead of "show")
 
 ### Home / Favourites
 ```
+home		(remote · jump — the global Home page)
 favourites		(remote · jump — global Favourites page)
 favorites		(remote · jump — same, American plural)
 favourite		(remote · jump — same, singular)
@@ -204,7 +205,7 @@ movie starship troopers		(remote · jump — movie prefix optional)
 movie armageddon 1998		(remote · jump — movie prefix optional, with a release year to disambiguate)
 blade runner final cut		(remote · jump — version/edition/cut suffix appended to the end)
 ```
-*When a movie exists multiple times in the library, its distinguisher must be included. In the last "Blade Runner" example, " (International Theatrical)" and " (Final Cut)" are appended after the title. The parentheses themselves are ignored during matching. If there is only one match, the content inside the parentheses is also ignored. However, if there are multiple matches, the text inside the parentheses must be provided to identify the correct item.
+*When a movie exists multiple times in the library, its distinguisher must be included. In this example, " (International Theatrical)" and " (Final Cut)" are appended after the title. The parentheses themselves are ignored during matching. If there is only one match, the content inside the parentheses is also ignored. However, if there are multiple matches, the text inside the parentheses must be provided to identify the correct item.
 
 ### TV Show / Season / Episode
 ```
@@ -816,8 +817,9 @@ scroll stop		(bare · same, order swapped)
 
 ---
 
-## 19. Miscellaneous — `bare` unless noted
+## 19. General/Basic System & Utility Command Controls — `bare` unless noted
 ```
+home		(remote · jump — the global Home page)
 search alien		(bare/remote · opens the search results for "alien")
 find gladiator		(bare/remote · same, different trigger word, different title)
 reload		(bare · reloads the current page)
