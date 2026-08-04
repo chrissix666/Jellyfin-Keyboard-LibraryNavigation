@@ -222,10 +222,17 @@ babylon 5 specials		(remote ·  jump season — season 0)
 ### Context shortcuts — `bare`, already inside a series/season/episode
 ```
 s2		(bare · jump — Season 2, while inside the show)
+s02		(bare · jump — same, leading zero)
 season 2		(bare · jump — same, spelled out)
+season 02		(bare · jump — same, spelled out, leading zero)
 e1		(bare · jump — Episode 1, while inside a season)
+e01		(bare · jump — same, leading zero)
 episode 1		(bare · jump — same, spelled out)
+episode 01		(bare · jump — same, spelled out, leading zero)
 s2e1		(bare · jump — Season 2 Episode 1 directly)
+s02e01		(bare · jump — same, leading zeros)
+season 2 episode 1		(bare · jump — same, both spelled out)
+season 02 episode 01		(bare · jump — same, both spelled out, leading zeros)
 ```
 
 ---
