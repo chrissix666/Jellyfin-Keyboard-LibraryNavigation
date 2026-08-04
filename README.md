@@ -696,18 +696,10 @@ share sphere		(remote prefix · action — different action, different movie)
 
 `page`/`pages` are interchangeable throughout this section. Bare `next`/`prev`/`forward`/`previous` (no number, no "page") and a bare number alone (like `21` or `45`) both follow the exact same fallback pattern explained in §1: the navigation/scroll action is tried first, and only falls back to a title search if it isn't available on the current page.
 
-```
-next		(bare · tries the next-page arrow first, falls back to the movie titled "Next")
-movie next		(bare · forces the title search for "Next", skips the arrow entirely)
-prev		(bare · tries the previous-page arrow — same fallback logic, no equally-famous "Prev"-titled movie)
-up		(bare · tries scrolling up first, falls back to the movie titled "Up")
-movie up		(bare · forces the title search for "Up")
-65		(bare · tries scrolling to 65% first, falls back to the movie titled "65")
-movie 65		(bare · forces the title search for "65")
-```
-
 ### Between library pages
 ```
+next		(bare/remote · tries the next-page arrow first, falls back to the movie titled "Next")
+prev		(bare/remote · tries the previous-page arrow — same fallback logic, no equally-famous "Prev"-titled movie)
 next page		(bare/remote · forced page-navigation, no fallback ambiguity)
 page next		(bare/remote · same, order swapped)
 forward page		(bare/remote · same, "forward" instead of "next")
@@ -736,10 +728,17 @@ pages prev 2		(bare/remote · same, "pages" plural)
 next 10		(bare/remote · a bigger jump)
 10 pages next		(bare/remote · same, order swapped)
 ```
-Stops early if it hits the end of the pages — no error either way.
+Stops early if it hits the end of the pages.
 
 ### Within a page
 ```
+65		(bare/remote · tries scrolling to 50% first, falls back to the movie titled "65")
+page 65		(bare/remote · 50% down the page, % sign optional)
+page 65%		(bare/remote · same, % sign included)
+up		(bare/remote · tries scrolling up first, falls back to the movie titled "Up")
+down		(bare/remote · one screen-height down)
+top		(bare/remote · forced, instant jump, no animation)
+bottom		(bare/remote · the other end)
 page top		(bare/remote · forced, instant jump, no animation)
 top page		(bare/remote · same, order swapped)
 page bottom		(bare/remote · the other end)
@@ -748,8 +747,6 @@ page down		(bare/remote · one screen-height down)
 down page		(bare/remote · same, order swapped)
 page up		(bare/remote · one screen-height up)
 up page		(bare/remote · same, order swapped)
-page 50		(bare/remote · 50% down the page, % sign optional)
-page 50%		(bare/remote · same, % sign included)
 ```
 Multiple scroll-screens at once, pure client-side scrolling, no waiting needed between them:
 ```
