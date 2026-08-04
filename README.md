@@ -58,7 +58,7 @@ Also works with a library's own custom server name — including a renamed Photo
 **Home Videos**: `homevideos`, `homevideo`, `home videos`, `home video` — all identical<br>
 **Music**: `music`, `songs` — all identical<br>
 
-Any Movies or TV Shows alias lands you on that library's own first tab (enforced explicitly, not left to the page's own memory). Ten equivalent destinations across the different libraries:
+Any Movies or TV Shows alias lands you on that library's own first tab (enforced explicitly, not left to the page's own memory):
 ```
 movies		(remote · jump — Movies library)
 film		(remote · jump — same, "film" instead of "movies")
