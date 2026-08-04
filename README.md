@@ -93,6 +93,7 @@ live guide		(remote · jump — same, "live" instead of "livetv")
 livetv recordings		(remote · jump — Live TV library, Recordings tab)
 movies genre war		(remote · jump — genre section within Movies)
 genres war		(bare · jump — same, already inside Movies)
+genrename (e.g. war, comedy, ...)    	(bare · jump — already inside Movies or TV Shows genres tab)
 ```
 
 ### Genre overview screen — `bare`, special priority<br>
