@@ -769,7 +769,7 @@ next 10		(bare/remote · a bigger jump)
 
 ### Within a page
 
-*Note: with `preventSpaceScroll: "smart"` in config on top (the default, §1), plain spacebar scrolling still works exactly as it does in vanilla Jellyfin whenever you're not mid-command — it's fast and usually all you need. Everything below is for when you specifically want a precise, typed jump instead.*
+*Note: with `preventSpaceScroll: "smart"` in config on top of .js (default setting, §1), plain spacebar scrolling still works exactly as it does in vanilla Jellyfin whenever you're not mid-command — it's fast and usually all you need. Everything below is for when you specifically want a precise, typed jump instead.*
 ```
 *65		(bare/remote · tries scrolling to 50% first, falls back to the movie titled "65")
 page 65		(bare/remote · 50% down the page, % sign optional)
