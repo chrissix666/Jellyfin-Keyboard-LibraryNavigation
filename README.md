@@ -390,19 +390,16 @@ play 75%		(bare · play — seeks in the movie/episode you're already on)
 ```
 
 ### Trailer — `bare` and `remote`, order-free, position-free
-*Trailers are allowed on Movie, Collection, TV Show, and Season level. Only episode level and home videos are excluded.
+Trailers are allowed on Movie, Collection, TV Show, and Season level. Only episode level and home videos are excluded.
 ```
-play trailer gladiator		(remote · play — baseline)
+trailer / play trailer / trailer play		(bare · play — current page, all three identical)
+play trailer movie gladiator		(remote · play — library identifier and baseline)
 armageddon play trailer		(remote · play — different movie, title moved to the front)
 trailer play con air		(remote · play — different movie, "trailer" moved to the front)
 starship troopers trailer play		(remote · play — different movie, "play" moved to the end)
 play sphere trailer		(remote · play — different movie, "trailer" moved to the end)
+tvshow falling skies play trailer		(remote · play — library identifier and baseline)
 trailer armageddon play		(remote · play — different arrangement)
-trailer / play trailer / trailer play		(bare · play — current page, all three identical)
-```
-
-Works on movies, series, seasons, and collections directly — not on individual episodes:
-```
 farscape trailer		(remote · play — trailer at series level)
 babylon 5 season 2 trailer		(remote · play — trailer at that specific season's level)
 stargate sg-1 s5 trailer		(remote · play — same idea, different show/season)
@@ -415,6 +412,7 @@ mission impossible collection trailer		(remote · play — different collection)
 next up		(bare · jump — Next Up episode on the series page you're on)
 play next up		(bare · play — same episode, played directly)
 farscape next up		(remote · jump — remote version)
+tvshow farscape next up		(remote · jump — remote version with library identifier)
 next up babylon 5		(remote · jump — different show, order swapped)
 play stargate sg-1 next up		(remote · play — different show, played)
 play next up stargate atlantis		(remote · play — different show, order swapped)
