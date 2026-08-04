@@ -317,7 +317,7 @@ Jumps to a cross-library list, independent of which library the tag/genre/studio
 Bare `random` is context-aware: it picks among whatever's actually relevant to where you currently are.
 
 ### Context-based — `bare`
-Bare `random` picks based on wherever you currently are — the whole Movies/TVShows/Collections library if you're on one of those library pages, a genre/studio/tag/person view (real server-side query across the entire list, matching how Jellyfin's own Shuffle button works, not limited to what's currently loaded on screen), or the current series/season/episode/collection if you're on one of those detail pages (on an episode, it picks a different episode from the same show). If on Home, or the context is undefined, it picks from Movie/Series/Collection combined. Manually-applied filters on top of a genre/studio/tag/person view are **not** taken into account — only the base view itself.
+Bare `random` looks at where you currently are and picks accordingly. On the Movies library page, it picks a random movie. On the TVShows library page, it picks a random show. On the Collections library page, it picks a random collection. On a genre/studio/tag/person view, same idea — a real server-side query across the entire list, not just what's currently loaded on screen. But once you're actually inside one specific item, it goes one level deeper instead of picking a sibling: on a series or season page, it picks a random episode from that show; on a collection page, it picks a random movie from that collection; on an episode page, it picks a different random episode from the same show. From Home, or anywhere the context is unclear, it falls back to a mix of Movie/Series/Collection. Manually-applied filters on top of a genre/studio/tag/person view aren't taken into account — only the base view itself.
 ```
 random		(bare · jump — picks based on your current context, see above)
 play random / random play		(bare · play — same as above, but instead of just jumping to it, it also plays it)
@@ -336,8 +336,7 @@ random tvshow		(jump — random pick from all shows)
 random show		(jump — same, "show" instead)
 random series		(jump — same, "series" instead)
 ```
-One exception: `random movie`/`random film` (and their plurals) still respect the context if you're currently *inside* a collection — they pick a random movie from that collection rather than going global. Type words for Series/Collection themselves (`random tvshow`, `random collection`, etc.) always go global regardless of context.
-
+One exception: `random movie`/`random film` (and their plurals) still respect the context if you're currently *inside* a collection — they pick a random movie from that collection rather than going global.
 ### With a specific title — `remote`, order-free between `random`/`play` and the title
 ```
 play random movie		(play — random movie, played instead of opened)
@@ -740,8 +739,6 @@ tvshow download farscape		(remote prefix · action — same idea, TV show instea
 
 ## 18. Pagination & scrolling — `bare` and `remote`
 
-*Note: with `preventSpaceScroll: "smart"` (the default, §1), plain spacebar scrolling still works exactly as it does in vanilla Jellyfin whenever you're not mid-command — it's fast and usually all you need. Everything below is for when you specifically want a precise, typed jump instead.*
-
 `page`/`pages` are interchangeable throughout this section. Lines marked with a leading `*` are the **ultra-lazy, and slightly dangerous** variant: a single bare word or number with no "page" prefix (`next`, `prev`, `up`, `down`, `top`, `bottom`, or a bare number like `21`/`45`). These follow the same fallback pattern from §2 — the navigation/scroll action is tried first, only falling back to a title search if it isn't available on the current page. It's the fastest thing to type, but also the one most likely to accidentally land you on a movie titled the same thing instead. If that risk bothers you, just add `page` in front and it's always unambiguous.
 
 ### Between library pages
@@ -763,7 +760,7 @@ first page		(bare/remote · same, order swapped)
 page last		(bare/remote · clicks "next" repeatedly until disabled — jumps to the last page)
 last page		(bare/remote · same, order swapped)
 ```
-Multiple jumps at once — number (1–99) and direction word in either order, `page`/`pages` optional:
+Multiple jumps at once — number (1–99) and direction word in either order, stops early if it hits the end of the pages. `page`/`pages` optional:
 ```
 next 3		(bare/remote · clicks "next" three times, 500ms apart)
 3 next		(bare/remote · same, order swapped)
@@ -776,7 +773,9 @@ pages prev 2		(bare/remote · same, "pages" plural)
 next 10		(bare/remote · a bigger jump)
 10 pages next		(bare/remote · same, order swapped)
 ```
-Stops early if it hits the end of the pages.
+
+
+*Note: with `preventSpaceScroll: "smart"` (the default, §1), plain spacebar scrolling still works exactly as it does in vanilla Jellyfin whenever you're not mid-command — it's fast and usually all you need. Everything below is for when you specifically want a precise, typed jump instead.*
 
 ### Within a page
 ```
