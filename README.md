@@ -212,9 +212,15 @@ play oppenheimer chapter 3              (chapter number, count)
 play oppenheimer 0%                     (% is optional, literally the same as forced replay)
 play oppenheimer 50%                    (% is optional, counted half of video, everything betwen 0-100 possible)
 play oppenheimer 100%                   (% is optional, 100% falls back to 99%)
+false play stranger things                    (triggers play on TV show level, playing the first unwatched episode, or, if none or all are watched, from the TvShow beginning.)
+false play stranger things s2                 (triggers play on Season level, playing the first unwatched episode, or, if none or all are watched, from the Season beginning.)
 play stranger things s4e1 chapter 2     (chapter number, count)
 play stranger things s4e1 chaptername   (some videos includes real chapter names in Metadata)
-play chapter 3                          (bare — seeks in the movie/episode you're already on)
+false play s4e3                               (bare — seeks in the Tv Show you're already on)
+false play s2                                 (bare — seeks in the Season of TV Show you're already on, playing the first unwatched episode, or, if none or all are watched, from the season beginning.)
+false play e3                                 (bare — seeks in the Season of Tv Show you're already on)
+false play                                    (bare — seeks in the libary/list/movie/set/tvshow/season/episode you're already on)
+play chapter 3                          (bare — seeks chapter in the movie/episode you're already on)
 ```
 
 ### Trailer — `[both]`, order-free, position-free
