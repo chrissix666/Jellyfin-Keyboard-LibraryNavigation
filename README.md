@@ -41,9 +41,9 @@ A handful of bare words are overloaded: page-navigation action first, title sear
 | `65` | scroll to 65% of the page | search title/folder "65" (2023 film) | `page 65` | `movie 65` |
 
 ### Play vs. Resume vs. Replay
-- **On a movie or episode directly**: Play and Resume are the same button. Replay forces a restart, ignoring saved progress.
-- **On a series, season, or collection**: no separate replay state exists — `play`, `resume`, `replay` all click the one visible Play button; only `shuffle` differs.
-- **Chapter/percent seeking** only makes sense once a specific movie or episode has been resolved — see §8.
+- **On a movie or episode directly**: Play and Resume are the same button. Replay forces a restart, ignoring saved progress.<br>
+- **On a series, season, or collection**: no separate replay state exists — `play`, `resume`, `replay` all click the one visible Play button; only `shuffle` differs.<br>
+- **Chapter/percent seeking** only makes sense once a specific movie or episode has been resolved — see §8.<br>
 
 ---
 
@@ -51,12 +51,12 @@ A handful of bare words are overloaded: page-navigation action first, title sear
 
 Also works with a library's own custom server name — including a renamed Photos/Home Videos library, since the script falls back to matching your library list by exact name.
 
-**Movies**: `movies`, `movie`, `film`, `films` — all identical
-**TV Shows**: `tvshows`, `tvshow`, `tv`, `series`, `show`, `shows` — all identical
-**Live TV**: `livetv`, `live`, `pvr`, `live tv` — all identical
-**Collections / Box Sets**: `collections`, `collection`, `sets`, `set`, `boxsets`, `boxset` — all identical
-**Home Videos**: `homevideos`, `homevideo`, `home videos`, `home video` — all identical
-**Music**: `music`, `songs` — all identical
+**Movies**: `movies`, `movie`, `film`, `films` — all identical<br>
+**TV Shows**: `tvshows`, `tvshow`, `tv`, `series`, `show`, `shows` — all identical<br>
+**Live TV**: `livetv`, `live`, `pvr`, `live tv` — all identical<br>
+**Collections / Box Sets**: `collections`, `collection`, `sets`, `set`, `boxsets`, `boxset` — all identical<br>
+**Home Videos**: `homevideos`, `homevideo`, `home videos`, `home video` — all identical<br>
+**Music**: `music`, `songs` — all identical<br>
 
 Any Movies or TV Shows alias lands you on that library's own first tab (enforced explicitly, not left to the page's own memory). Ten equivalent destinations across the different libraries:
 ```
@@ -75,9 +75,9 @@ holiday photos		(remote · jump — a custom-named library, exact name required)
 ### Library tabs — only Movies, TV Shows, and Live TV have sub-tabs
 Order-fixed: library word first.
 
-**Movies tabs**: Movies (self) `movies`/`movie`/`film`/`films` · Suggestions `suggestions`/`suggestion` · Trailers `trailers`/`trailer` · Favorites `favorites`/`favourites`/`favourite`/`favorite`/`fav` · Collections `collections`/`collection`/`sets`/`set`/`boxsets`/`boxset` · Genres `genre`/`genres`
-**TV Shows tabs**: Shows (self) `shows`/`show`/`tvshows`/`tvshow` · Suggestions `suggestions`/`suggestion` · Upcoming `upcoming` · Genres `genre`/`genres` · TV Networks `tv networks`/`networks`/`studios`/`studio` · Episodes `episodes`/`episode`
-**Live TV tabs**: Programs `programs`/`program` · Guide `guide` · Channels `channels` · Recordings `recordings` · Schedule `schedule` · Series `series`
+**Movies tabs**: Movies (self) `movies`/`movie`/`film`/`films` · Suggestions `suggestions`/`suggestion` · Trailers `trailers`/`trailer` · Favorites `favorites`/`favourites`/`favourite`/`favorite`/`fav` · Collections `collections`/`collection`/`sets`/`set`/`boxsets`/`boxset` · Genres `genre`/`genres`<br>
+**TV Shows tabs**: Shows (self) `shows`/`show`/`tvshows`/`tvshow` · Suggestions `suggestions`/`suggestion` · Upcoming `upcoming` · Genres `genre`/`genres` · TV Networks `tv networks`/`networks`/`studios`/`studio` · Episodes `episodes`/`episode`<br>
+**Live TV tabs**: Programs `programs`/`program` · Guide `guide` · Channels `channels` · Recordings `recordings` · Schedule `schedule` · Series `series`<br>
 
 ```
 movies trailers		(remote · jump — Movies library, Trailers tab)
@@ -95,7 +95,7 @@ movies genre war		(remote · jump — genre section within Movies)
 genres war		(bare · jump — same, already inside Movies)
 ```
 
-### Genre overview screen — `bare`, special priority
+### Genre overview screen — `bare`, special priority<br>
 While the "Genres" tab is open, typing a listed genre's own name jumps straight into it — works bare (already on the tab) and remotely (`tvshows genre drama` from anywhere).
 
 ### Returning to the series level — `bare`, from inside an episode or season
@@ -178,8 +178,8 @@ Recognized suffix words, by language: `collection`, `anthology`, `saga`, `set` (
 
 ## 5. People — `remote` · jump, order-free between person word and media-type word
 
-**Person triggers**: `person`, `persons`, `actor`, `actors`, `actress`, `actresses`, `people`, `peoples`, `celebrity`, `celeb`
-**Media-type triggers**: `movie`/`movies`/`film`/`films` · `tvshow`/`tvshows`/`series`/`show`/`shows`/`tv` · `episode`/`episodes`
+**Person triggers**: `person`, `persons`, `actor`, `actors`, `actress`, `actresses`, `people`, `peoples`, `celebrity`, `celeb`<br>
+**Media-type triggers**: `movie`/`movies`/`film`/`films` · `tvshow`/`tvshows`/`series`/`show`/`shows`/`tv` · `episode`/`episodes`<br>
 
 Profile pages, five different actors, five identical-in-structure phrasings:
 ```
@@ -395,10 +395,10 @@ babylon 5 play next up		(remote · play — different show, "play" moved to the 
 ```
 filter <category> <value> <category> <value> ...
 ```
-**`filter` values**: `played`, `unplayed`, `resumable`/`continue`/`continue watching`, `favorite`/`favorites`/`favourite`/`favourites`/`fav`
-**`feature` values**: `subtitle`/`subtitles`, `trailer`/`trailers`, `special feature`/`special features`, `theme song`/`theme songs`, `theme video`/`theme videos`
-**`video type` values**: `hd`, `sd`, `4k`, `3d`, `bd`/`bluray`/`blu-ray`, `dvd`
-**Category words**: `genre`/`genres` · `year`/`years` · `tag`/`tags` · `rating`/`ratings` · `feature`/`features` · `video type`/`video types` · `filter`/`filters`
+**`filter` values**: `played`, `unplayed`, `resumable`/`continue`/`continue watching`, `favorite`/`favorites`/`favourite`/`favourites`/`fav`<br>
+**`feature` values**: `subtitle`/`subtitles`, `trailer`/`trailers`, `special feature`/`special features`, `theme song`/`theme songs`, `theme video`/`theme videos`<br>
+**`video type` values**: `hd`, `sd`, `4k`, `3d`, `bd`/`bluray`/`blu-ray`, `dvd`<br>
+**Category words**: `genre`/`genres` · `year`/`years` · `tag`/`tags` · `rating`/`ratings` · `feature`/`features` · `video type`/`video types` · `filter`/`filters`<br>
 ```
 filter genre war		(bare/remote · single category)
 filter genre war year 1998		(bare/remote · two categories at once)
@@ -428,12 +428,12 @@ reset filters year 1998 rating r		(bare/remote · removes two specific filters, 
 ```
 sort <sort-by> <order>
 ```
-**Order**: `ascending`, `descending`
-**Everywhere**: `name`, `community rating`/`communityrating`, `date added`/`dateadded`, `date played`/`dateplayed`, `parental rating`/`parentalrating`, `release date`/`releasedate`
-**Movies only**: `critics rating`/`criticsrating`, `play count`/`playcount`, `runtime`, `random`
-**TVShows only**: `date episode added`/`dateepisodeadded`
-**List views only**: `folders`
-**Collections tab specifically**: only `name`, `community rating`, `date added`, `parental rating`, `release date`.
+**Order**: `ascending`, `descending`<br>
+**Everywhere**: `name`, `community rating`/`communityrating`, `date added`/`dateadded`, `date played`/`dateplayed`, `parental rating`/`parentalrating`, `release date`/`releasedate`<br>
+**Movies only**: `critics rating`/`criticsrating`, `play count`/`playcount`, `runtime`, `random`<br>
+**TVShows only**: `date episode added`/`dateepisodeadded`<br>
+**List views only**: `folders`<br>
+**Collections tab specifically**: only `name`, `community rating`, `date added`, `parental rating`, `release date`.<br>
 ```
 sort name		(bare/remote · applies sort)
 sort community rating		(bare/remote · different sort-by)
@@ -453,8 +453,8 @@ sort descending		(bare/remote · same, the other direction)
 ```
 view <value(s)>
 ```
-**Movies/TVShows**: `banner`, `list`, `poster`, `poster card`/`postercard`, `thumb`, `thumb card`/`thumbcard`
-**List views**: `primary`, `banner`, `disc`, `logo`, `thumb`, `list`, plus `show title`/`show the title` (checkbox)
+**Movies/TVShows**: `banner`, `list`, `poster`, `poster card`/`postercard`, `thumb`, `thumb card`/`thumbcard`<br>
+**List views**: `primary`, `banner`, `disc`, `logo`, `thumb`, `list`, plus `show title`/`show the title` (checkbox)<br>
 ```
 view poster		(bare/remote · Movies/TVShows view)
 view banner		(bare/remote · different view)
@@ -525,8 +525,8 @@ movies reset filters genre action		(remote · jump to Movies, then remove just t
 
 ## 14. Watched — `bare` and `remote`, fully unified: 15 sentence patterns × 4 word spellings
 
-**Sentence patterns** (15, all identical in meaning): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`
-**Word spellings** (4, all identical in meaning): `watched`, `unwatched`, `played`, `unplayed`
+**Sentence patterns** (15, all identical in meaning): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`<br>
+**Word spellings** (4, all identical in meaning): `watched`, `unwatched`, `played`, `unplayed`<br>
 Plus each spelling works entirely bare, with no pattern at all — 60 patterned + 4 bare = 64 total.
 ```
 watched		(toggle · bare — no pattern needed)
@@ -562,8 +562,8 @@ pearl harbor toggle unwatched		(remote suffix · toggle — order swapped)
 
 ## 15. Favorite — `bare` and `remote`, fully unified: 15 sentence patterns × 5 word spellings
 
-**Sentence patterns** (15, identical set to Watched): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`
-**Word spellings** (5, all identical in meaning): `favorite`, `favourite`, `favorites`, `favourites`, `fav`
+**Sentence patterns** (15, identical set to Watched): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`<br>
+**Word spellings** (5, all identical in meaning): `favorite`, `favourite`, `favorites`, `favourites`, `fav`<br>
 75 phrasings total, no bare-word-only form for this category.
 ```
 add to favorite		(toggle · bare — American singular)
