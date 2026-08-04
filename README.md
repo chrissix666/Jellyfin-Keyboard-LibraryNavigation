@@ -6,6 +6,28 @@ Every example line below is annotated with: whether it's **bare** (current page 
 
 ---
 
+## Installation
+
+Requires the [JavaScript Injector](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector) plugin.
+
+1. Go to **Dashboard → Plugins → JavaScript Injector**, add a new script entry, and paste in the full contents of the .js script. Save and enable it.
+2. Reload the Jellyfin web UI in your browser. Hover any collection card to see it in action.
+
+---
+
+## Tested on
+
+- Windows 11
+- Chrome
+- Jellyfin Web 10.10.7
+- Jellyfin JavaScript Injector
+
+## License
+
+MIT
+
+---
+
 ## 1. Core concepts — read this first
 
 ### Scope tags used below
