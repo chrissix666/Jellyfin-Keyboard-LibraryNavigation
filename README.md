@@ -317,7 +317,7 @@ Jumps to a cross-library list, independent of which library the tag/genre/studio
 Bare `random` is context-aware: it picks among whatever's actually relevant to where you currently are.
 
 ### Context-based — `bare`
-Bare `random` picks based on wherever you currently are — in a library, a list, Movies, Series, Season, Sets, Genres, or Tags — respecting any active filter. If on Home, or the context is undefined, it picks from Movie/Series/Set combined.
+Bare `random` picks based on wherever you currently are — in a library: Movies, Series, Season, Set. If on Home, or the context is undefined, it picks from Movie/Series/Set combined.
 ```
 random		(bare · jump — picks based on your current context, see above)
 play random / random play		(bare · play — same as above, but instead of just jumping to it, it also plays it)
