@@ -161,10 +161,11 @@ Examples that exist both as a series and a movie: **Doctor Who, Spartacus, Star 
 
 ```
 gladiator		(remote · jump — title only)
-movie armageddon 1998		(remote · jump — movie prefix optional, with a release year to disambiguate)
-con air		(remote · jump — titly only)
 movie starship troopers		(remote · jump — movie prefix optional)
+movie armageddon 1998		(remote · jump — movie prefix optional, with a release year to disambiguate)
+blade runner final cut		(remote · jump — version/edition/cut suffix appended to the end)
 ```
+*When a movie exists multiple times in the library, its distinguisher must be included. In this example, " (International Theatrical)" and " (Final Cut)" are appended after the title. The parentheses themselves are ignored during matching. If there is only one match, the content inside the parentheses is also ignored. However, if there are multiple matches, the text inside the parentheses must be provided to identify the correct item.
 
 ### TV Show / Season / Episode
 ```
