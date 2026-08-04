@@ -1,6 +1,6 @@
 # Jellyfin Keyboard Navigation — Command Reference
 
-A Tampermonkey/Violentmonkey userscript that lets you control Jellyfin entirely by typing. Start typing anywhere in the web UI (not while a video is playing, not while a real input field is focused) and press **Enter** to run a command, **Backspace** to edit, **Escape** to clear.
+This userscript that lets you control Jellyfin entirely by typing. Start typing anywhere in the web UI (not while a video is playing, not while a real input field is focused, e.g. on search) and press **Enter** to run a command, **Backspace** to edit, **Escape** to clear.
 
 Every example line below is annotated with: whether it's **bare** (current page only) or **remote** (jumps from anywhere), whether it **jumps** or **plays**, and — where a line is a variation of the one above — what exactly changed. Titles and actors are deliberately varied line by line rather than repeated, so you can see the breadth of a real library reflected throughout.
 
