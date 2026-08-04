@@ -380,7 +380,6 @@ play random collection random movie		(play — same, "collection" instead of "se
 play random tvshow		(play — random show, Play button at series level, no nested pick)
 play random collection		(play — random collection, Play button at collection level, no nested pick)
 ```
-Mismatched combinations are rejected rather than silently doing something else — `random tvshow random movie` and `random collection random season` simply do nothing, since a show has no movies inside it and a collection has no seasons.
 
 ### Chapter & percent with random
 ```
@@ -467,9 +466,7 @@ babylon 5 play next up		(remote · play — different show, "play" moved to the 
 ---
 
 ## 10. Filter — `bare` and `remote`
-```
-filter <category> <value> <category> <value> ...
-```
+
 **`filter` values**: `played`, `unplayed`, `resumable`/`continue`/`continue watching`, `favorite`/`favorites`/`favourite`/`favourites`/`fav`<br>
 **`feature` values**: `subtitle`/`subtitles`, `trailer`/`trailers`, `special feature`/`special features`, `theme song`/`theme songs`, `theme video`/`theme videos`<br>
 **`video type` values**: `hd`, `sd`, `4k`, `3d`, `bd`/`bluray`/`blu-ray`, `dvd`<br>
@@ -503,9 +500,7 @@ reset filters year 1998 rating r		(bare/remote · removes two specific filters, 
 ---
 
 ## 11. Sort — `bare` and `remote`
-```
-sort <sort-by> <order>
-```
+
 **Order**: `ascending`, `descending`<br>
 **Everywhere**: `name`, `community rating`/`communityrating`, `date added`/`dateadded`, `date played`/`dateplayed`, `parental rating`/`parentalrating`, `release date`/`releasedate`<br>
 **Movies only**: `critics rating`/`criticsrating`, `play count`/`playcount`, `runtime`, `random`<br>
@@ -532,9 +527,7 @@ tvshows sort date episode added		(remote · jump to TV Shows, then sort — TVSh
 ---
 
 ## 12. View — `bare` and `remote`
-```
-view <value(s)>
-```
+
 **Movies/TVShows**: `banner`, `list`, `poster`, `poster card`/`postercard`, `thumb`, `thumb card`/`thumbcard`<br>
 **List views**: `primary`, `banner`, `disc`, `logo`, `thumb`, `list`, plus `show title`/`show the title` (checkbox)<br>
 ```
@@ -614,7 +607,7 @@ movies reset filters genre action		(remote · jump to Movies, then remove just t
 
 ---
 
-## 15. Watched — `bare` and `remote`, fully unified: 15 sentence patterns × 4 word spellings
+## 15. Watched — `bare` and `remote`
 
 **Sentence patterns** (15, all identical in meaning): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`<br>
 **Word spellings** (4, all identical in meaning): `watched`, `unwatched`, `played`, `unplayed`<br>
@@ -655,7 +648,7 @@ mark played movie armageddon 1998		(remote prefix · toggle — "movie" prefix p
 
 ---
 
-## 16. Favorite — `bare` and `remote`, fully unified: 15 sentence patterns × 5 word spellings
+## 16. Favorite — `bare` and `remote`
 
 **Sentence patterns** (15, identical set to Watched): `add to`, `add`, `delete from`, `delete`, `mark as`, `mark`, `set to`, `set`, `unmark from`, `unmark`, `unset from`, `unset`, `remove from`, `remove`, `toggle`<br>
 **Word spellings** (5, all identical in meaning): `favorite`, `favourite`, `favorites`, `favourites`, `fav`<br>
@@ -774,10 +767,9 @@ next 10		(bare/remote · a bigger jump)
 10 pages next		(bare/remote · same, order swapped)
 ```
 
+### Within a page
 
 *Note: with `preventSpaceScroll: "smart"` (the default, §1), plain spacebar scrolling still works exactly as it does in vanilla Jellyfin whenever you're not mid-command — it's fast and usually all you need. Everything below is for when you specifically want a precise, typed jump instead.*
-
-### Within a page
 ```
 *65		(bare/remote · tries scrolling to 50% first, falls back to the movie titled "65")
 page 65		(bare/remote · 50% down the page, % sign optional)
