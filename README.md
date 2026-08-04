@@ -317,7 +317,7 @@ Jumps to a cross-library list, independent of which library the tag/genre/studio
 Bare `random` is context-aware: it picks among whatever's actually relevant to where you currently are.
 
 ### Context-based — `bare`
-Bare `random` picks based on wherever you currently are — the whole Movies/TVShows/Collections library if you're on one of those library pages, a genre/studio/tag/person view (real server-side query across the entire list, matching how Jellyfin's own Shuffle button works, not limited to what's currently loaded on screen), or the current series/season/collection if you're on one of those detail pages. If on Home, or the context is undefined, it picks from Movie/Series/Collection combined. Manually-applied filters on top of a genre/studio/tag/person view are **not** taken into account — only the base view itself.
+Bare `random` picks based on wherever you currently are — the whole Movies/TVShows/Collections library if you're on one of those library pages, a genre/studio/tag/person view (real server-side query across the entire list, matching how Jellyfin's own Shuffle button works, not limited to what's currently loaded on screen), or the current series/season/episode/collection if you're on one of those detail pages (on an episode, it picks a different episode from the same show). If on Home, or the context is undefined, it picks from Movie/Series/Collection combined. Manually-applied filters on top of a genre/studio/tag/person view are **not** taken into account — only the base view itself.
 ```
 random		(bare · jump — picks based on your current context, see above)
 play random / random play		(bare · play — same as above, but instead of just jumping to it, it also plays it)
@@ -336,6 +336,7 @@ random tvshow		(jump — random pick from all shows)
 random show		(jump — same, "show" instead)
 random series		(jump — same, "series" instead)
 ```
+One exception: `random movie`/`random film` (and their plurals) still respect the context if you're currently *inside* a collection — they pick a random movie from that collection rather than going global. Type words for Series/Collection themselves (`random tvshow`, `random collection`, etc.) always go global regardless of context.
 
 ### With a specific title — `remote`, order-free between `random`/`play` and the title
 ```
@@ -380,6 +381,7 @@ play random collection random movie		(play — same, "collection" instead of "se
 play random tvshow		(play — random show, Play button at series level, no nested pick)
 play random collection		(play — random collection, Play button at collection level, no nested pick)
 ```
+Mismatched combinations are rejected rather than silently doing something else — `random tvshow random movie` and `random collection random season` simply do nothing, since a show has no movies inside it and a collection has no seasons.
 
 ### Chapter & percent with random
 ```
