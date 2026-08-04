@@ -547,8 +547,13 @@ filter year 1998 rating r feature subtitle video type hd		(bare/remote · four c
 ### Removing filters again — reset, whole or partial
 ```
 reset filters		(bare/remote · clears every active filter at once)
-reset filters year 1998		(bare/remote · removes only the year filter, keeps any others active)
+reset filters year		(bare/remote · removes all years in the filter, keeps any others active)
+reset filters year 1998		(bare/remote · removes explicit year filter, keeps any others active)
+reset filters genre (bare/remote · removes all genre specific filters, keeps any others)
+reset filters genre war (bare/remote · removes explicit war genre specific filter, keeps any others)
 reset filters genre war rating r		(bare/remote · removes two specific filters, keeps any others)
+reset filters rating r		(bare/remote · removes explicit rating r specific filter, keeps any others)
+reset filters rating		(bare/remote · removes all reating specific filters, keeps any others)
 movies reset filters		(remote · jump to Movies, then clear all its filters)
 movies reset filters genre action		(remote · jump to Movies, then remove just that one filter)
 ```
