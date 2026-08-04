@@ -118,7 +118,7 @@ movies      (bare · jump — Favourites page's Movies section when already on t
 fav shows		(remote · jump — its TV Shows section)
 shows      (bare · jump — Favourites page's TV Shows section when already on the Favourites page)
 fav episodes		(remote · jump — its Episodes section)
-episoes      (bare · jump — Favourites page's Episodes section when already on the Favourites page)
+episodes      (bare · jump — Favourites page's Episodes section when already on the Favourites page)
 fav people		(remote · jump — its People section)
 people      (bare · jump — Favourites page's People section when already on the Favourites page)
 fav collections		(remote · jump — its Collections section)
@@ -126,6 +126,9 @@ collections      (bare · jump — Favourites page's Collection section when alr
 fav videos		(remote · jump — its Home Videos section)
 videos      (bare · jump — Favourites page's Home Videos section when already on the Favourites page)
 ```
+### Home / Favourites overview screen — `bare`, special priority<br>
+While the "Home Favourites" tab is open, typing a listed Sub (movies, shows, episodes, people, collections, videos) name jumps straight into it — works bare (already on the tab) and remotely (`fav people, fav movies, fav collections, ...` from anywhere).
+
 Force-jump to the global Favourites page, order-free, ten equivalent phrasings:
 ```
 home fav		(remote · jump — force-jump, overrides context, see §1)
