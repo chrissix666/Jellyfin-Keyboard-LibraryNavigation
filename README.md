@@ -654,7 +654,7 @@ refreshmetadata
 share
 delete
 ```
-Downloading works at every level — a single movie, a whole series, one season, or one episode:
+Downloading works at every level except collections, whole libary and list views — a single movie, a whole series, one season, or one episode:
 ```
 gladiator download		(remote suffix · action — one movie)
 download armageddon		(remote prefix · action — different movie, order swapped)
