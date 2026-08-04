@@ -113,11 +113,17 @@ favourite		(remote · jump — same, singular)
 favorite		(remote · jump — same, singular + American)
 fav		(remote · jump — same, short form)
 fav movies		(remote · jump — Favourites page's Movies section)
+movies      (bare · jump — Favourites page's Movies section when already on the Favourites page)
 fav shows		(remote · jump — its TV Shows section)
+shows      (bare · jump — Favourites page's TV Shows section when already on the Favourites page)
 fav episodes		(remote · jump — its Episodes section)
+episoes      (bare · jump — Favourites page's Episodes section when already on the Favourites page)
 fav people		(remote · jump — its People section)
+people      (bare · jump — Favourites page's People section when already on the Favourites page)
 fav collections		(remote · jump — its Collections section)
+collections      (bare · jump — Favourites page's Collection section when already on the Favourites page)
 fav videos		(remote · jump — its Home Videos section)
+videos      (bare · jump — Favourites page's Home Videos section when already on the Favourites page)
 ```
 Force-jump to the global Favourites page, order-free, ten equivalent phrasings:
 ```
@@ -132,27 +138,41 @@ favorites home		(remote · jump — same, order swapped)
 home favourites		(remote · jump — British plural)
 favourites home		(remote · jump — same, order swapped)
 ```
+*When you are in Movies, there is also a Favourites tab. In this tab, short favourite phrasings have priority. This can be overridden by using a forced "global/home Favourites" jump.
 
 ---
 
 ## 3. Finding media — `remote` · jump
-```
-gladiator		(remote · jump — exact title)
-armageddon 1998		(remote · jump — same idea, with a release year to disambiguate)
-con air		(remote · jump — different movie)
-starship troopers		(remote · jump — different movie)
-```
-Exact title → title with a trailing bracketed group stripped → title cut at a subtitle separator. A trailing 4-digit number is tried both as part of the title and as a release-year filter.
 
-### Season / Episode
+The year and the library distinction between Movie or TV Show are purely optional. However, they are useful for differentiation if there are two identical matches, because if the match is not unambiguous, no match will be returned.<br>
+<br>
+For movies with the same title, the year is required to distinguish between them.<br>
+For TV shows (at least in my setup), the year is already treated as part of the title, for example **Doctor Who** & **Doctor Who (2005)** or **MacGyver** & **MacGyver (2016)**.<br>
+<br>
+The matching process follows these steps:<br>
+**Exact title → title with a trailing bracketed group stripped → title cut at a subtitle separator.**<br>
+A trailing 4-digit number is tried both as part of the title and as a release-year filter, allowing special cases like **Blade Runner 2049 (2017)** to be distinguished from **Blade Runner (1982)**.<br>
+<br>
+Examples that exist both as a series and a movie: **Doctor Who, Spartacus, Star Wars: The Clone Wars**.
+
 ```
-farscape season 2		(remote · jump — full word)
-farscape s2		(remote · jump — same, compact)
-farscape s02		(remote · jump — same, leading zero)
-stargate sg-1 s5e14		(remote · jump — same show family, specific episode)
-stargate atlantis s02e01		(remote · jump — different show, leading zeros)
-stargate atlantis s2:e1		(remote · jump — same, colon separator)
-babylon 5 specials		(remote · jump — season 0)
+gladiator		(remote · jump — title only)
+movie armageddon 1998		(remote · jump — movie prefix optional, with a release year to disambiguate)
+con air		(remote · jump — titly only)
+movie starship troopers		(remote · jump — movie prefix optional)
+```
+
+### TV Show / Season / Episode
+```
+farscape		(remote · jump show — title only)
+tvshow farscape   (remote · jump show — TV Show prefix optional)
+farscape season 2		(remote · jump season — full word)
+farscape s2		(remote · jump season — same, compact)
+farscape s02		(remote · jump season — same, leading zero)
+stargate sg-1 s5e14		(remote · jump episode — same show family, specific episode)
+stargate atlantis s02e01		(remote · jump episode — different show, leading zeros)
+stargate atlantis s2:e1		(remote ·  jump episode — same, colon separator)
+babylon 5 specials		(remote ·  jump season — season 0)
 ```
 ### Context shortcuts — `bare`, already inside a series/season/episode
 ```
@@ -181,7 +201,7 @@ Recognized suffix words, by language: `collection`, `anthology`, `saga`, `set` (
 **Person triggers**: `person`, `persons`, `actor`, `actors`, `actress`, `actresses`, `people`, `peoples`, `celebrity`, `celeb`<br>
 **Media-type triggers**: `movie`/`movies`/`film`/`films` · `tvshow`/`tvshows`/`series`/`show`/`shows`/`tv` · `episode`/`episodes`<br>
 
-Profile pages, five different actors, five identical-in-structure phrasings:
+Profile pages, five different actors, identical-in-structure phrasings:
 ```
 person tom hardy		(remote · jump — profile page)
 persons cate blanchett		(remote · jump — same idea, plural word, different actress)
@@ -189,7 +209,7 @@ actor idris elba		(remote · jump — different word, different actor)
 actress charlize theron		(remote · jump — different actress)
 celeb keanu reeves		(remote · jump — short form, different actor)
 ```
-Movies — ten equivalent-structure phrasings, mixing singular/plural and both orders, ten different actors:
+Movies — ten equivalent-structure phrasings, mixing singular/plural and both orders:
 ```
 movies persons dwayne johnson		(remote · jump — his movies)
 persons movies jason statham		(remote · jump — order swapped, different actor)
@@ -202,7 +222,7 @@ actor films tom cruise		(remote · jump — order swapped)
 movies actors scarlett johansson		(remote · jump — "actors" plural)
 actors movies leonardo dicaprio		(remote · jump — order swapped)
 ```
-TV appearances — same pattern, ten more actors:
+TV appearances — same pattern:
 ```
 tvshows actors matt damon		(remote · jump — his TV shows)
 actors tvshows will smith		(remote · jump — order swapped)
@@ -227,11 +247,11 @@ celeb episodes gerard butler		(remote · jump — order swapped)
 
 ## 6. Tags, genres, studios — `remote` · jump, order-fixed (type word first)
 ```
-tag based on true events		(remote · jump — singular)
-tags war films		(remote · jump — plural, different tag)
-genre war		(remote · jump — a genre)
-genres science fiction		(remote · jump — plural, different genre)
-studio a24		(remote · jump — a studio)
+tag based on true events		(remote · jump — singular, cross-library list)
+tags war films		(remote · jump — plural, different tag, cross-library list)
+genre war		(remote · jump — a genre, cross-library list, both Movies & TV Shows)
+genres science fiction		(remote · jump — plural, different genre, cross-library list, both Movies & TV Shows)
+studio a24		(remote · jump — a studio, cross-library list, both Movies & TV Shows)
 ```
 Jumps to a cross-library list, independent of which library the tag/genre/studio "belongs" to — unlike `movies genre war` (§2), which stays scoped to one library's own genre tab.
 
@@ -243,8 +263,8 @@ Bare `random` is context-aware: it picks among whatever's actually relevant to w
 
 ### Context-based — `bare`
 ```
-random		(bare · jump — plain, unfiltered library page → queried across the *entire* library, same reach as "random movie"/"random show"/"random collection")
-play random		(bare · play — same pick, played instead of just opened)
+random		(bare · jump — from home, pick random movie or random show or random collection")
+play random		(bare · play — from home, played instead of just opened, random movie or random show or random collection)
 random		(bare · jump — filtered tag/genre list → random pick among only what's shown)
 random		(bare · jump — inside a series, no season chosen → random episode from anywhere in the show)
 random		(bare · jump — inside one specific season → random episode from that season only)
@@ -263,12 +283,13 @@ random set		(jump — same, "set" instead)
 random tvshow		(jump — random pick from all shows)
 random show		(jump — same, "show" instead)
 random series		(jump — same, "series" instead)
-play random movie		(play — random movie, played instead of opened)
-play random set		(play — random collection, Play button clicked)
 ```
 
 ### With a specific title — `remote`, order-free between `random`/`play` and the title
 ```
+play random movie		(play — random movie, played instead of opened)
+play random set		(play — random collection, Play button clicked)
+play random tvshow		(play — random show, played instead of opened)
 farscape random		(remote · jump — random episode of this show)
 random babylon 5		(remote · jump — different show, order swapped)
 play stargate sg-1 random		(remote · play — random episode played)
@@ -355,11 +376,13 @@ play starship troopers 50%		(remote · play — the halfway point)
 play sphere 100%		(remote · play — capped down to 99%, to avoid landing past the end)
 play babylon 5 s2e1 chapter 2		(remote · play — specific episode, by chapter number)
 play stargate sg-1 s5e14 chaptername		(remote · play — specific episode, by chapter name)
-play chapter 3		(bare · play — seeks in the movie/episode you're already on)
+play chapter 3		(bare · play — seeks chapter number in the movie/episode you're already on)
+play chaptername		(bare · play — seeks chaptername in the movie/episode you're already on)
 play 75%		(bare · play — seeks in the movie/episode you're already on)
 ```
 
 ### Trailer — `bare` and `remote`, order-free, position-free
+*Trailers are allowed on Movie, Collection, TV Show, and Season level. Only episode level and home videos are excluded.
 ```
 play trailer gladiator		(remote · play — baseline)
 armageddon play trailer		(remote · play — different movie, title moved to the front)
@@ -369,6 +392,7 @@ play sphere trailer		(remote · play — different movie, "trailer" moved to the
 trailer armageddon play		(remote · play — different arrangement)
 trailer / play trailer / trailer play		(bare · play — current page, all three identical)
 ```
+
 Works on movies, series, seasons, and collections directly — not on individual episodes:
 ```
 farscape trailer		(remote · play — trailer at series level)
