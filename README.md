@@ -738,6 +738,8 @@ tvshow download farscape		(remote prefix · action — same idea, TV show instea
 
 ## 18. Pagination & scrolling — `bare` and `remote`
 
+*Note: with `preventSpaceScroll: "smart"` (the default, §1), plain spacebar scrolling still works exactly as it does in vanilla Jellyfin whenever you're not mid-command — it's fast and usually all you need. Everything below is for when you specifically want a precise, typed jump instead.*
+
 `page`/`pages` are interchangeable throughout this section. Lines marked with a leading `*` are the **ultra-lazy, and slightly dangerous** variant: a single bare word or number with no "page" prefix (`next`, `prev`, `up`, `down`, `top`, `bottom`, or a bare number like `21`/`45`). These follow the same fallback pattern from §2 — the navigation/scroll action is tried first, only falling back to a title search if it isn't available on the current page. It's the fastest thing to type, but also the one most likely to accidentally land you on a movie titled the same thing instead. If that risk bothers you, just add `page` in front and it's always unambiguous.
 
 ### Between library pages
