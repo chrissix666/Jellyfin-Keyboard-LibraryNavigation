@@ -204,7 +204,10 @@ Recognized suffix words, by language: `collection`, `anthology`, `saga`, `set` (
 ## 5. People — `remote` · jump, order-free between person word and media-type word
 
 **Person triggers**: `person`, `persons`, `actor`, `actors`, `actress`, `actresses`, `people`, `peoples`, `celebrity`, `celeb`<br>
-**Media-type triggers**: `movie`/`movies`/`film`/`films` · `tvshow`/`tvshows`/`series`/`show`/`shows`/`tv` · `episode`/`episodes`<br>
+**Media-type triggers**:<br>
+Movies appearances: `movie`/`movies`/`film`/`films`<br>
+TV Show appearances: `tvshow`/`tvshows`/`series`/`show`/`shows`/`tv`<br>
+Episode appearances: `episode`/`episodes`<br>
 
 Profile pages, five different actors, identical-in-structure phrasings:
 ```
@@ -214,7 +217,7 @@ actor idris elba		(remote · jump — different word, different actor)
 actress charlize theron		(remote · jump — different actress)
 celeb keanu reeves		(remote · jump — short form, different actor)
 ```
-Movies — ten equivalent-structure phrasings, mixing singular/plural and both orders:
+Movies — equivalent-structure phrasings, mixing singular/plural and both orders:
 ```
 movies persons dwayne johnson		(remote · jump — his movies)
 persons movies jason statham		(remote · jump — order swapped, different actor)
