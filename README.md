@@ -28,6 +28,23 @@ MIT
 
 Every example line below is annotated with: whether it's **bare** (current page only) or **remote** (jumps from anywhere), whether it **jumps** or **plays**, and — where a line is a variation of the one above — what exactly changed. Titles and actors are deliberately varied line by line rather than repeated, so you can see the breadth of a real library reflected throughout.
 
+## 0. Configuration
+
+These are the settings at the very top of the script itself — edit them directly in the `.js` file before installing, or in the JavaScript Injector's script editor afterward.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `idleResetMs` | `2500` | Milliseconds of inactivity before the typed buffer resets on its own |
+| `minLength` | `1` | Minimum number of characters required before pressing Enter runs anything |
+| `preventSpaceScroll` | `true` | Blocks the page from scrolling when you press spacebar (so spaces in commands don't also scroll the page) |
+| `showIndicator` | `true` | Shows the small on-screen overlay of what you've typed so far |
+| `indicatorCorner` | `"top-center"` | Where the overlay is anchored: `top-left`, `top-right`, `bottom-left`, `bottom-right`, `top-center`, `center-center`, `bottom-center` |
+| `indicatorOffsetX` | `"0vw"` | Extra horizontal offset from that corner, in `vw` (percent of window width) — resolution-independent |
+| `indicatorOffsetY` | `"6vh"` | Extra vertical offset from that corner, in `vh` (percent of window height) |
+| `indicatorColor` | `"#00ff41"` | Text color of the overlay, any RGB hex code |
+
+---
+
 ## 1. Core concepts — read this first
 
 ### Scope tags used below
@@ -463,6 +480,9 @@ filter filter played		(bare/remote · watched-state category)
 filter filter favorite		(bare/remote · favourite-state category)
 movies filter genre action		(remote · jump then filter)
 tag based on true events filter feature trailer		(remote · jump then filter, combined with a tag lookup)
+movie filter genre action		(remote · jump then filter — "movie" singular instead of "movies")
+tvshow filter genre war		(remote · jump then filter — TV Shows instead)
+tvshows filter genre war year 2020		(remote · jump then filter — TV Shows, two categories at once)
 ```
 
 ### Reset
@@ -497,6 +517,10 @@ sort date episode added		(bare/remote · TVShows-only sort-by)
 sort folders		(bare/remote · list-views-only sort-by)
 sort ascending		(bare/remote · order only, keeps whatever sort-by was already active)
 sort descending		(bare/remote · same, the other direction)
+movies sort name		(remote · jump to Movies, then sort)
+movie sort name		(remote · jump to Movies, then sort — singular "movie" instead)
+tvshow sort community rating descending		(remote · jump to TV Shows, then sort — TV Shows instead)
+tvshows sort date episode added		(remote · jump to TV Shows, then sort — TVShows-only sort-by)
 ```
 
 ---
@@ -518,6 +542,8 @@ view disc		(bare/remote · different list-view-only value)
 view logo		(bare/remote · different list-view-only value)
 view show title		(bare/remote · just the checkbox, spaced)
 view primary show title		(bare/remote · view + the checkbox together)
+movies view banner		(remote · jump to Movies, then view)
+tvshow view list		(remote · jump to TV Shows, then view — TV Shows instead)
 ```
 
 ---
@@ -530,6 +556,8 @@ letter b		(bare · jump — different letter)
 letter #		(bare · jump — non-alphabetic entries)
 tag based on true events letter s		(remote · jump — combinable, runs last regardless of typed position)
 movies letter g		(remote · jump — jump to Movies, then to letter G)
+movie letter g		(remote · jump — same, singular "movie" instead)
+tvshow letter f		(remote · jump — same idea, TV Shows instead)
 ```
 The same fallback pattern from §1, with its two dedicated real-movie examples:
 ```
@@ -613,6 +641,10 @@ mark played con air		(remote prefix · toggle — different pattern, different m
 starship troopers mark played		(remote suffix · toggle — order swapped)
 toggle unwatched sphere		(remote prefix · toggle — different pattern, different spelling, different movie)
 pearl harbor toggle unwatched		(remote suffix · toggle — order swapped)
+movie watched gladiator		(remote prefix · toggle — with explicit "movie" library-lock prefix)
+watched movie gladiator		(remote prefix · toggle — same, "movie" moved after the pattern)
+tvshow watched farscape		(remote prefix · toggle — same idea, TV show instead)
+mark played movie armageddon 1998		(remote prefix · toggle — "movie" prefix plus release year together)
 ```
 
 ---
@@ -648,6 +680,10 @@ toggle favourite con air		(remote prefix · toggle — different pattern, differ
 starship troopers toggle favourite		(remote suffix · toggle — order swapped)
 add to favorites sphere		(remote prefix · toggle — different pattern, different movie)
 pearl harbor add to favorites		(remote suffix · toggle — order swapped)
+mark fav movie gladiator		(remote prefix · toggle — with explicit "movie" library-lock prefix)
+movie gladiator mark fav		(remote prefix · toggle — same, "movie" moved to the very front)
+tvshow toggle favourite farscape		(remote prefix · toggle — same idea, TV show instead)
+add to fav movie armageddon 1998		(remote prefix · toggle — "movie" prefix plus release year together)
 ```
 
 ---
@@ -688,18 +724,23 @@ download farscape s2e1		(remote prefix · action — one specific episode)
 farscape s2e1 download		(remote suffix · action — same, order swapped)
 con air mediainfo		(remote suffix · action — squashed spelling, different action)
 share sphere		(remote prefix · action — different action, different movie)
+movie download gladiator		(remote prefix · action — with explicit "movie" library-lock prefix)
+download movie armageddon 1998		(remote prefix · action — "movie" prefix plus release year together)
+tvshow download farscape		(remote prefix · action — same idea, TV show instead, whole series)
 ```
 
 ---
 
 ## 17. Pagination & scrolling — `bare` and `remote`
 
-`page`/`pages` are interchangeable throughout this section. Bare `next`/`prev`/`forward`/`previous` (no number, no "page") and a bare number alone (like `21` or `45`) both follow the exact same fallback pattern explained in §1: the navigation/scroll action is tried first, and only falls back to a title search if it isn't available on the current page.
+*`page`/`pages` are interchangeable throughout this section. Bare `next`/`prev`/`forward`/`previous` (no number, no "page") and a bare number alone (like `21` or `45`) both follow the exact same fallback pattern explained in §1: the navigation/scroll action is tried first, and only falls back to a title search if it isn't available on the current page.
+
+Everywhere below, lines marked with a leading `*` are this **ultra-lazy, and slightly dangerous** variant — a single bare word or number with no "page" prefix. It's the fastest thing to type, but it's also the one most likely to accidentally land you on a movie titled the same thing instead of doing the navigation you meant, if the action isn't available on the page you're currently on. If that risk bothers you, just add `page` in front and it's always unambiguous.
 
 ### Between library pages
 ```
-next		(bare/remote · tries the next-page arrow first, falls back to the movie titled "Next")
-prev		(bare/remote · tries the previous-page arrow — same fallback logic, no equally-famous "Prev"-titled movie)
+*next		(bare/remote · tries the next-page arrow first, falls back to the movie titled "Next")
+*prev		(bare/remote · tries the previous-page arrow — same fallback logic, no equally-famous "Prev"-titled movie)
 next page		(bare/remote · forced page-navigation, no fallback ambiguity)
 page next		(bare/remote · same, order swapped)
 forward page		(bare/remote · same, "forward" instead of "next")
@@ -732,13 +773,13 @@ Stops early if it hits the end of the pages.
 
 ### Within a page
 ```
-65		(bare/remote · tries scrolling to 50% first, falls back to the movie titled "65")
+*65		(bare/remote · tries scrolling to 50% first, falls back to the movie titled "65")
 page 65		(bare/remote · 50% down the page, % sign optional)
 page 65%		(bare/remote · same, % sign included)
-up		(bare/remote · tries scrolling up first, falls back to the movie titled "Up")
-down		(bare/remote · one screen-height down)
-top		(bare/remote · forced, instant jump, no animation)
-bottom		(bare/remote · the other end)
+*up		(bare/remote · tries scrolling up first, falls back to the movie titled "Up")
+*down		(bare/remote · one screen-height down)
+*top		(bare/remote · forced, instant jump, no animation)
+*bottom		(bare/remote · the other end)
 page top		(bare/remote · forced, instant jump, no animation)
 top page		(bare/remote · same, order swapped)
 page bottom		(bare/remote · the other end)
