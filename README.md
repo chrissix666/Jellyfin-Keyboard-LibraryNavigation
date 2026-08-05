@@ -502,20 +502,19 @@ reset filters year 1998 rating r		(bare/remote · removes two specific filters, 
 ## 11. Sort — `bare` and `remote`
 
 **Order**: `ascending`, `descending`<br>
-**Everywhere**: `name`, `community rating`/`communityrating`, `date added`/`dateadded`, `date played`/`dateplayed`, `parental rating`/`parentalrating`, `release date`/`releasedate`<br>
-**Movies only**: `critics rating`/`criticsrating`, `play count`/`playcount`, `runtime`, `random`<br>
-**TVShows only**: `date episode added`/`dateepisodeadded`<br>
-**List views only**: `folders`<br>
-**Collections tab specifically**: only `name`, `community rating`, `date added`, `parental rating`, `release date`.<br>
+**Movies**: `name`, `random`, `community rating`/`communityrating`, `critics rating`/`criticsrating`, `date added`/`dateadded`, `date played`/`dateplayed`, `parental rating`/`parentalrating`, `play count`/`playcount`, `release date`/`releasedate`, `runtime`<br>
+**TVShows**: `name`, `random`, `community rating`/`communityrating`, `date added`/`dateadded`, `date episode added`/`dateepisodeadded`, `date played`/`dateplayed`, `parental rating`/`parentalrating`, `release date`/`releasedate`<br>
+**List views**: `name`, `community rating`/`communityrating`, `critics rating`/`criticsrating`, `date added`/`dateadded`, `date played`/`dateplayed`, `folders`, `parental rating`/`parentalrating`, `play count`/`playcount`, `release date`/`releasedate`, `runtime`<br>
+**Collections tab specifically**: `name`, `community rating`/`communityrating`, `date added`/`dateadded`, `parental rating`/`parentalrating`, `release date`/`releasedate`<br>
 ```
 sort name		(bare/remote · applies sort)
 sort community rating		(bare/remote · different sort-by)
 sort community rating descending		(bare/remote · sort-by + order together)
 sort date added ascending		(bare/remote · different sort-by + order)
-sort runtime		(bare/remote · Movies-only sort-by)
-sort play count		(bare/remote · different Movies-only sort-by)
+sort runtime		(bare/remote · Movies/List-views sort-by, not TVShows/Collections)
+sort play count		(bare/remote · same category, different sort-by)
 sort date episode added		(bare/remote · TVShows-only sort-by)
-sort folders		(bare/remote · list-views-only sort-by)
+sort folders		(bare/remote · List-views-only sort-by)
 sort ascending		(bare/remote · order only, keeps whatever sort-by was already active)
 sort descending		(bare/remote · same, the other direction)
 movies sort name		(remote · jump to Movies, then sort)
