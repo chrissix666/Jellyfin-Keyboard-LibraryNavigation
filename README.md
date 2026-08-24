@@ -1,3 +1,7 @@
+[Jellyfin Projects](https://linktr.ee/JellyfinProjects) | [Kodi Projects](https://linktr.ee/KodiProjects)
+
+---
+
 # Jellyfin Keyboard Navigation — Command Reference
 
 This userscript that lets you control Jellyfin entirely by typing. Start typing anywhere in the web UI (not while a video is playing, not while a real input field is focused, e.g. on search) and press **Enter** to run a command, **Backspace** to edit, **Escape** to clear.
