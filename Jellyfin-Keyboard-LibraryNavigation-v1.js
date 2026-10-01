@@ -1,5 +1,214 @@
 (function () {
   "use strict";
+
+  /* jfcompat 1.0 - one script for Jellyfin web 10.10.7 and 12.1.
+   * Paste this block unchanged at the top of a script (inside its IIFE).
+   * It is pure: no side effects at load, no globals except window.jfcompat
+   * (set only when absent, for console checks; scripts use the local const).
+   * Rule: on 10.10.7 every answer equals what the scripts computed before. */
+  const jfcompat = (function () {
+      'use strict';
+      const VERSION = '1.0';
+
+      // ---------- version ----------
+      // The web client ships with the server, so the server version decides.
+      // ApiClient.appVersion() is not used: inside Jellyfin Media Player or the
+      // Android app NativeShell replaces it with the app's own number
+      // (apphost.js 10.10.7:417-419, 12.1:399-401).
+      // Before ApiClient knows the server, <html data-theme> is a 12.x-only hint
+      // (12.1 scripts/themeManager.js:46; 10.10.7 never sets it).
+      function serverVersion() {
+          try {
+              const api = window.ApiClient;
+              const v = api && typeof api.serverVersion === 'function' && api.serverVersion();
+              if (v) {
+                  const [major, minor] = String(v).split('.').map(Number);
+                  return { major: major, minor: minor || 0, raw: String(v) };
+              }
+          } catch (e) { /* ignore */ }
+          return null;
+      }
+      // 12.x model: modern layout default, routes without .html, legacy auth off.
+      // 10.11 was not audited; treated as the new model (live-check before relying on it).
+      function isNewModel() {
+          const v = serverVersion();
+          if (v) return v.major > 10 || (v.major === 10 && v.minor >= 11);
+          return document.documentElement.hasAttribute('data-theme');
+      }
+
+      // ---------- routes ----------
+      // getRoute(): { name, params } with '#!' and '.html' removed, so one name
+      // fits both: home, movies, tv, list, search, details, video, music, livetv ...
+      function getRoute() {
+          const h = window.location.hash || '';
+          const m = /^#!?\/([^?]*)(?:\?(.*))?$/.exec(h);
+          const name = m ? m[1].replace(/\.html$/i, '').toLowerCase() : '';
+          return { name: name, params: new URLSearchParams(m && m[2] ? m[2] : '') };
+      }
+      function isRoute() {
+          const n = getRoute().name;
+          for (let i = 0; i < arguments.length; i++) if (arguments[i] === n) return true;
+          return false;
+      }
+      // routeUrl('list', {parentId}) -> '#/list.html?...' on 10.10.7, '#/list?...' on 12.1.
+      // details and video never had '.html' (10.10.7 appRouter.js:447,472).
+      const NO_SUFFIX = ['details', 'video', ''];
+      function routeUrl(name, params) {
+          const q = params ? new URLSearchParams(params).toString() : '';
+          const suffix = (!isNewModel() && NO_SUFFIX.indexOf(name) < 0) ? '.html' : '';
+          return '#/' + name + suffix + (q ? '?' + q : '');
+      }
+      // Navigate inside the app (no reload). Emby.Page.show strips '#' and '!'
+      // in both versions (appRouter.js 10.10.7:516, 12.1:552).
+      function go(name, params) {
+          const url = routeUrl(name, params);
+          if (window.Emby && window.Emby.Page && typeof window.Emby.Page.show === 'function') {
+              window.Emby.Page.show(url.slice(1));
+          } else {
+              window.location.hash = url;
+          }
+      }
+
+      // ---------- layout ----------
+      // 10.10.7: MUI only when localStorage.layout === 'experimental' (RootAppRouter.tsx:19-20).
+      // 12.1:    classic only for desktop-legacy | mobile-legacy | tv
+      //          (constants/layoutMode.ts, layoutManager.js:41); everything else,
+      //          including a stale 'experimental', is MUI.
+      // Both versions pick the layout once per page load, so the DOM answer is cached.
+      const LEGACY_12 = ['desktop-legacy', 'mobile-legacy', 'tv'];
+      const MUI_SEARCH = '.MuiAppBar-root a[href^="#/search"]';
+      let cachedLayout = null;
+      function getLayout() {
+          if (cachedLayout) return cachedLayout;
+          // 1) what the page shows (not on the video route: 12.1 draws an osdHeader there;
+          //    not on dashboard pages: there the classic header is hidden in both layouts)
+          if (getRoute().name !== 'video') {
+              if (document.querySelector(MUI_SEARCH)) return (cachedLayout = 'mui');
+              const sk = document.querySelector('.skinHeader:not(.osdHeader)');
+              // .skinHeader is position:fixed, so offsetParent is always null; a
+              // display:none ancestor (AppHeader isHidden) leaves it without client rects.
+              if (sk && sk.getClientRects().length > 0 && sk.querySelector('.headerRight')) return (cachedLayout = 'classic');
+          }
+          // 2) the setting, read the way each version reads it (not cached)
+          let v = '';
+          try { v = localStorage.getItem('layout') || ''; } catch (e) { /* ignore */ }
+          if (isNewModel()) return LEGACY_12.indexOf(v) >= 0 ? 'classic' : 'mui';
+          return v === 'experimental' ? 'mui' : 'classic';
+      }
+      function isMui() { return getLayout() === 'mui'; }
+
+      // ---------- header ----------
+      // MUI: the search link sits in the right-hand button box with SyncPlay and
+      // RemotePlay (components/toolbar/AppToolbar.tsx:84-85, both versions).
+      // Its href is '#/search.html' on 10.10.7 and '#/search' on 12.1.
+      // Classic: only a SHOWN header counts. 12.1 keeps the hidden classic header
+      // in the DOM in the modern layout (AppHeader.tsx:20), and both versions hide
+      // it on dashboard pages; a button placed there would never be seen.
+      function isShown(el) { return !!el && el.getClientRects().length > 0; }
+      function getSearchLink() {
+          if (isMui()) return document.querySelector(MUI_SEARCH);
+          const b = document.querySelector('.skinHeader:not(.osdHeader) .headerRight .headerSearchButton');
+          return isShown(b) ? b : null;
+      }
+      function getHeaderBox() {
+          if (isMui()) { const a = document.querySelector(MUI_SEARCH); return a ? a.parentElement : null; }
+          const box = document.querySelector('.skinHeader:not(.osdHeader) .headerRight');
+          return isShown(box) ? box : null;
+      }
+      // cb(box | null) whenever the box may have changed (the MUI toolbar unmounts
+      // on /video and has no buttons on public pages). setTimeout, not rAF, so it
+      // also runs in background tabs.
+      function onHeaderBoxChange(cb) {
+          let queued = false;
+          const run = function () { queued = false; cb(getHeaderBox()); };
+          const start = function () {
+              if (!document.body) { setTimeout(start, 200); return; }
+              run();
+              new MutationObserver(function () {
+                  if (!queued) { queued = true; setTimeout(run, 50); }
+              }).observe(document.body, { childList: true, subtree: true });
+          };
+          start();
+      }
+
+      // ---------- theme ----------
+      function getThemeId() {
+          const d = document.documentElement.getAttribute('data-theme');          // 12.1
+          if (d) return d;
+          const link = document.querySelector('link[href*="themes/"][href$="theme.css"]'); // both
+          const m = link && /themes\/([^/]+)\/theme\.css/.exec(link.getAttribute('href') || '');
+          return m ? m[1] : 'dark';
+      }
+      // MUI IconButton (color inherit) hover = action.active at action.hoverOpacity.
+      // 12.1 exposes it as CSS variables (themes/index.ts, prefix 'jf'); the
+      // fallbacks are the 10.10.7 values (dark 8 % white, light/appletv 4 % black).
+      function getMuiHoverColor() {
+          const old = /^(light|appletv)$/.test(getThemeId()) ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.08)';
+          if (!document.documentElement.hasAttribute('data-theme')) return old;
+          const cs = getComputedStyle(document.documentElement);
+          const ch = cs.getPropertyValue('--jf-palette-action-activeChannel').trim();
+          const op = cs.getPropertyValue('--jf-palette-action-hoverOpacity').trim();
+          return (ch && op) ? 'rgba(' + ch + ' / ' + op + ')' : old;
+      }
+
+      // ---------- auth for raw fetch ----------
+      // 12.1 ignores X-Emby-Token, X-MediaBrowser-Token, X-Emby-Authorization and
+      // ?api_key= unless EnableLegacyAuthorization (AuthorizationContext.cs:93-110).
+      // The Authorization header and ?ApiKey= work in both versions.
+      function accessToken() {
+          try {
+              const api = window.ApiClient;
+              const t = api && typeof api.accessToken === 'function' && api.accessToken();
+              if (t) return t;
+          } catch (e) { /* ignore */ }
+          try {
+              const c = JSON.parse(localStorage.getItem('jellyfin_credentials') || '{}');
+              const s = (c.Servers || []).find(function (x) { return x.AccessToken; });
+              return s ? s.AccessToken : null;
+          } catch (e) { return null; }
+      }
+      function authHeaders(extra) {
+          const h = Object.assign({}, extra || {});
+          const t = accessToken();
+          if (t) h.Authorization = 'MediaBrowser Token="' + t + '"';
+          return h;
+      }
+      // Adds ?ApiKey=<token> to a URL that cannot carry a header (img src, download link).
+      function withApiKey(url) {
+          const t = accessToken();
+          if (!t) return url;
+          return url + (url.indexOf('?') < 0 ? '?' : '&') + 'ApiKey=' + encodeURIComponent(t);
+      }
+
+      // ---------- pages ----------
+      // React library pages in the 12.1 modern layout (apps/modern/routes/asyncRoutes/user.ts).
+      // In 10.10.7 'experimental' some of these were React too; live-check before reuse there.
+      const REACT_LIBRARY_ROUTES = ['movies', 'tv', 'music', 'livetv', 'boxsets', 'homevideos',
+          'musicvideos', 'mixed', 'books', 'playlists', 'home'];
+      function isReactLibraryPage() {
+          return isNewModel() && isMui() && REACT_LIBRARY_ROUTES.indexOf(getRoute().name) >= 0;
+      }
+
+      // ---------- video OSD ----------
+      // Legacy view in both (10.10.7 controllers/playback/video/index.html:30;
+      // 12.1 apps/legacy/controllers/playback/video/index.html:30).
+      function getOsdBar() {
+          return document.querySelector('.videoOsdBottom .osdControls .buttons');
+      }
+
+      const api = {
+          VERSION: VERSION, serverVersion: serverVersion, isNewModel: isNewModel,
+          getRoute: getRoute, isRoute: isRoute, routeUrl: routeUrl, go: go,
+          getLayout: getLayout, isMui: isMui,
+          getSearchLink: getSearchLink, getHeaderBox: getHeaderBox, onHeaderBoxChange: onHeaderBoxChange,
+          getThemeId: getThemeId, getMuiHoverColor: getMuiHoverColor,
+          accessToken: accessToken, authHeaders: authHeaders, withApiKey: withApiKey,
+          isReactLibraryPage: isReactLibraryPage, getOsdBar: getOsdBar
+      };
+      if (!window.jfcompat) window.jfcompat = api;
+      return api;
+  })();
+  /* end jfcompat 1.0 */
   const CONFIG = {
     idleResetMs: 2500, // ms of inactivity before the input buffer resets
     minLength: 1, // minimum characters before Enter triggers a command
@@ -444,7 +653,8 @@
     return false;
   }
   function alphaPickerSelector(value) {
-    return `.alphaPickerButton[data-value="${value}"]`;
+    // Legacy picker, plus the 12.x MUI letter buttons (AlphabetPicker.tsx).
+    return `.alphaPickerButton[data-value="${value}"], .MuiToggleButtonGroup-root button.MuiToggleButton-root[value="${value}"]`;
   }
   const ACTIONSHEET_DATA_ID = { Banner: "Banner", List: "List", Poster: "Poster", PosterCard: "PosterCard", Thumb: "Thumb", ThumbCard: "ThumbCard" };
   const SELECT_OPTION_VALUE = { Primary: "primary", Banner: "banner", Disc: "disc", Logo: "logo", Thumb: "thumb", List: "list" };
@@ -695,6 +905,7 @@
     return false;
   }
   async function performFullFilterReset(token) {
+    if (isModernLibraryPage()) return modernResetFilters();
     const opened = await clickSelectorsWhenReady(FILTER_BUTTON_SELECTORS, token);
     if (!opened) return false;
     await waitForDomSettle(300, 1200);
@@ -725,6 +936,7 @@
   }
   async function applyFilterChainViaUi(filterChain, token, desiredChecked = true) {
     if (!filterChain) return true;
+    if (isModernLibraryPage()) return await modernApplyFilters(filterChain, desiredChecked);
     const opened = await clickSelectorsWhenReady(FILTER_BUTTON_SELECTORS, token);
     if (!opened) return false;
     await waitForDomSettle();
@@ -2026,10 +2238,11 @@
     if (byName) return byName;
     return null;
   }
+  // Route names; jfcompat.routeUrl adds ".html" on 10.10.x (12.x dropped it).
   const LIBRARY_PAGE_BY_TYPE = {
-    movies: { page: "movies.html", idParam: "topParentId" },
-    tvshows: { page: "tv.html", idParam: "topParentId" },
-    livetv: { page: "livetv.html", idParam: null },
+    movies: { page: "movies", idParam: "topParentId" },
+    tvshows: { page: "tv", idParam: "topParentId" },
+    livetv: { page: "livetv", idParam: null },
   };
   function buildLibraryHash(library, mappedType) {
     const serverId = window.ApiClient.serverId ? window.ApiClient.serverId() : "";
@@ -2042,7 +2255,7 @@
       params.set("parentId", library.Id);
     }
     if (serverId) params.set("serverId", serverId);
-    return `#/${(pageConfig && pageConfig.page) || "list.html"}?${params.toString()}`;
+    return `${jfcompat.routeUrl((pageConfig && pageConfig.page) || "list")}?${params.toString()}`;
   }
   async function tryCurrentFolderChild(term, token) {
     const hash = window.location.hash || "";
@@ -2068,7 +2281,7 @@
     const navParams = new URLSearchParams();
     navParams.set("parentId", folder.Id);
     if (serverId) navParams.set("serverId", serverId);
-    window.location.hash = `#/list.html?${navParams.toString()}`;
+    window.location.hash = `${jfcompat.routeUrl("list")}?${navParams.toString()}`;
     return true;
   }
   const PRIMARY_TAB_TEXT = { movies: "Movies", tvshows: "Shows" };
@@ -2084,7 +2297,11 @@
       if (PRIMARY_TAB_TEXT[mappedType]) {
         await waitForDomSettle();
         if (token !== undefined && token !== commandToken) return true;
-        await clickTextWhenReady(PRIMARY_TAB_TEXT[mappedType], token);
+        if (isModernLibraryPage()) {
+          if (jfcompat.getRoute().params.get("tab") !== "0") modernSwitchTab(0);
+        } else {
+          await clickTextWhenReady(PRIMARY_TAB_TEXT[mappedType], token);
+        }
       }
       if (filterChain) {
         await waitForDomSettle();
@@ -2648,11 +2865,186 @@
     params.set("type", mediaType);
     params.set("personId", personId);
     if (serverId) params.set("serverId", serverId);
-    window.location.hash = `#/list.html?${params.toString()}`;
+    window.location.hash = `${jfcompat.routeUrl("list")}?${params.toString()}`;
   }
   function isOnDedicatedLibraryPage() {
-    const hash = window.location.hash || "";
-    return /\/movies\.html/i.test(hash) || /\/tv\.html/i.test(hash);
+    return jfcompat.isRoute("movies", "tv");
+  }
+  // ============================================================
+  // Jellyfin 12.x modern library pages (React/MUI)
+  // ============================================================
+  // In the 12.x default layout the movies / tv / collections library pages
+  // are React. The legacy sort, view and filter dialogs (.btnSort,
+  // .btnSelectView, emby-collapse ...) do not exist there. Instead each
+  // library + tab keeps its settings in localStorage under
+  // "<viewType> - <libraryId>" and re-reads them on a "local-storage" event
+  // (usehooks-ts useLocalStorage, apps/modern/features/libraries/hooks/
+  // useLibrary.tsx). Setting that object works in every UI language.
+  // 10.10.x never gets here: jfcompat.isReactLibraryPage() is false there.
+  const MODERN_TAB_VIEWS = {
+    movies: ["movies", "suggestions", "favorites", "collections", "genres", "studios", "playlists"],
+    tv: ["series", "suggestions", "upcoming", "genres", "studios", "episodes", "collections", "playlists"],
+    boxsets: ["collections", "favorites", "genres"],
+  };
+  // Legacy tab text -> 12.x tab index (constants/views/*.ts); no Trailers tab in 12.x.
+  const MODERN_TAB_INDEX = {
+    movies: { Movies: 0, Suggestions: 1, Favorites: 2, Collections: 3, Genres: 4 },
+    tvshows: { Shows: 0, Suggestions: 1, Upcoming: 2, Genres: 3, "TV Networks": 4, Episodes: 5 },
+  };
+  const MODERN_SORTBY = {
+    Name: ["SortName"],
+    Random: ["Random"],
+    CommunityRating: ["CommunityRating", "SortName"],
+    CriticsRating: ["CriticRating", "SortName"],
+    DateAdded: ["DateCreated", "SortName"],
+    DateEpisodeAdded: ["DateLastContentAdded", "SortName"],
+    DatePlayed: ["DatePlayed", "SortName"],
+    ParentalRating: ["OfficialRating", "SortName"],
+    PlayCount: ["PlayCount", "SortName"],
+    ReleaseDate: ["ProductionYear", "PremiereDate", "SortName"],
+    Runtime: ["Runtime", "SortName"],
+  };
+  function isModernLibraryPage() {
+    return jfcompat.isReactLibraryPage();
+  }
+  function getModernLibraryState() {
+    if (!isModernLibraryPage()) return null;
+    const route = jfcompat.getRoute();
+    const views = MODERN_TAB_VIEWS[route.name];
+    const libraryId = route.params.get("topParentId");
+    if (!views || !libraryId) return null;
+    const tab = parseInt(route.params.get("tab") || "0", 10) || 0;
+    const viewType = views[tab];
+    if (!viewType) return null;
+    const key = `${viewType} - ${libraryId}`;
+    let settings = null;
+    try {
+      settings = JSON.parse(localStorage.getItem(key) || "null");
+    } catch {
+      settings = null;
+    }
+    if (!settings) {
+      // getDefaultLibraryViewSettings (utils/settings.ts)
+      settings = {
+        ShowTitle: true,
+        ShowYear: true,
+        ViewMode: "grid",
+        ImageType: viewType === "studios" ? "Thumb" : "Primary",
+        CardLayout: false,
+        SortBy: [viewType === "episodes" ? "SeriesSortName" : "SortName"],
+        SortOrder: "Ascending",
+        StartIndex: 0,
+      };
+    }
+    return { route: route.name, libraryId, viewType, key, settings };
+  }
+  function updateModernLibrarySettings(mutate) {
+    const state = getModernLibraryState();
+    if (!state) return false;
+    const next = mutate({ ...state.settings }, state);
+    if (!next) return false;
+    localStorage.setItem(state.key, JSON.stringify(next));
+    window.dispatchEvent(new StorageEvent("local-storage", { key: state.key }));
+    return true;
+  }
+  function modernApplySort(values) {
+    let sortBy = values.map((v) => MODERN_SORTBY[v]).find(Boolean);
+    const sortOrder = values.map((v) => RADIO_SORTORDER_VALUE[v]).find(Boolean);
+    if (!sortBy && !sortOrder) return false;
+    return updateModernLibrarySettings((s, state) => {
+      if (sortBy) {
+        // The same names the 12.x sort menu uses for these views (SortButton.tsx).
+        if (state.viewType === "series" && sortBy[0] === "DatePlayed") sortBy = ["SeriesDatePlayed", "SortName"];
+        if (state.viewType === "episodes" && sortBy[0] === "SortName") sortBy = ["SeriesSortName"];
+        s.SortBy = sortBy;
+      }
+      if (sortOrder) s.SortOrder = sortOrder;
+      s.StartIndex = 0;
+      return s;
+    });
+  }
+  function modernApplyView(values) {
+    const known = values.filter((v) =>
+      ["Banner", "List", "Poster", "PosterCard", "Thumb", "ThumbCard", "Primary", "Disc", "Logo", "ShowTitle"].includes(v)
+    );
+    if (!known.length) return false;
+    return updateModernLibrarySettings((s) => {
+      for (const v of known) {
+        if (v === "List") s.ViewMode = "list";
+        else if (v === "ShowTitle") s.ShowTitle = !s.ShowTitle;
+        else {
+          s.ViewMode = "grid";
+          s.ImageType = v === "Poster" || v === "PosterCard" || v === "Primary" ? "Primary"
+            : v === "Thumb" || v === "ThumbCard" ? "Thumb" : v;
+          s.CardLayout = v === "PosterCard" || v === "ThumbCard";
+        }
+      }
+      return s;
+    });
+  }
+  async function modernApplyFilters(chain, desiredChecked) {
+    const state = getModernLibraryState();
+    if (!state) return false;
+    // Genre, tag and rating names must match the server's spelling.
+    let known = null;
+    if (["Genres", "Tags", "OfficialRatings"].some((c) => chain[c]) && window.ApiClient) {
+      try {
+        known = await window.ApiClient.getJSON(
+          window.ApiClient.getUrl("Items/Filters", { UserId: getUserId(), ParentId: state.libraryId })
+        );
+      } catch {
+        known = null;
+      }
+    }
+    const exact = (list, raw) =>
+      (list || []).find((x) => String(x).toLowerCase() === raw.toLowerCase().trim()) || titleCase(raw.trim());
+    return updateModernLibrarySettings((s) => {
+      const f = { ...(s.Filters || {}) };
+      const toggle = (field, value) => {
+        if (value === null || value === undefined) return;
+        const set = new Set(f[field] || []);
+        if (desiredChecked) set.add(value);
+        else set.delete(value);
+        f[field] = set.size ? [...set] : undefined;
+      };
+      for (const [category, values] of Object.entries(chain)) {
+        for (const raw of values) {
+          const lower = raw.toLowerCase().trim();
+          if (category === "Filters") toggle("Status", FILTERS_VALUE_MAP[lower]);
+          else if (category === "Features") toggle("Features", FEATURES_VALUE_MAP[lower]);
+          else if (category === "VideoTypes") {
+            const m = VIDEOTYPE_VALUE_MAP[lower];
+            if (!m) continue;
+            if (m.param === "VideoTypes") toggle("VideoTypes", m.value);
+            else toggle("VideoBasicFilter", m.param === "IsHD" && m.value === "false" ? "IsSD" : m.param);
+          } else if (category === "Years") toggle("Years", parseInt(raw, 10) || null);
+          else if (category === "Genres" || category === "Tags" || category === "OfficialRatings") {
+            toggle(category, exact(known && known[category], raw));
+          }
+        }
+      }
+      s.Filters = f;
+      s.StartIndex = 0;
+      return s;
+    });
+  }
+  function modernResetFilters() {
+    return updateModernLibrarySettings((s) => {
+      s.Filters = {};
+      s.StartIndex = 0;
+      return s;
+    });
+  }
+  // Tab index on a 12.x library page; null = no such tab there.
+  function modernTabIndex(libraryType, tabText) {
+    const map = MODERN_TAB_INDEX[libraryType];
+    return map && map[tabText] !== undefined ? map[tabText] : null;
+  }
+  function modernSwitchTab(index) {
+    const route = jfcompat.getRoute();
+    route.params.set("tab", String(index));
+    window.location.hash = `#/${route.name}?${route.params.toString()}`;
+    return true;
   }
   function getScrollContainer() {
     return document.querySelector(".main-content") || document.documentElement;
@@ -2663,6 +3055,9 @@
   }
   function clickPageNavButtonWhenReady(direction, token, timeoutMs, intervalMs = 150) {
     const selector = direction === "next" ? ".btnNextPage" : ".btnPreviousPage";
+    // 12.x modern library pages: the MUI pager (Pagination.tsx), found by its
+    // icon's test id. Only there, so 10.10.x keeps exactly the legacy lookup.
+    const modernIcon = direction === "next" ? "NavigateNextIcon" : "NavigateBeforeIcon";
     return new Promise((resolve) => {
       const start = Date.now();
       const tryClick = () => {
@@ -2670,8 +3065,14 @@
           resolve(false);
           return;
         }
-        const candidates = document.querySelectorAll(selector);
-        const btn = [...candidates].find((el) => el.offsetParent !== null && !el.disabled);
+        const candidates = [...document.querySelectorAll(selector)];
+        if (isModernLibraryPage()) {
+          document.querySelectorAll(`svg[data-testid="${modernIcon}"]`).forEach((svg) => {
+            const b = svg.closest("button");
+            if (b) candidates.push(b);
+          });
+        }
+        const btn = candidates.find((el) => el.offsetParent !== null && !el.disabled);
         if (btn) {
           btn.click();
           resolve(true);
@@ -2815,6 +3216,7 @@
     return null;
   }
   async function applyViewOverride(values, token) {
+    if (isModernLibraryPage()) return modernApplyView(values);
     const currentType = await detectCurrentLibraryType();
     if ((currentType === "movies" || currentType === "tvshows") && isOnDedicatedLibraryPage()) {
       const dataIdValue = values.map((v) => ACTIONSHEET_DATA_ID[v]).find(Boolean);
@@ -2856,6 +3258,7 @@
     return true;
   }
   async function applySortOverride(values, token) {
+    if (isModernLibraryPage()) return modernApplySort(values);
     const currentType = await detectCurrentLibraryType();
     if ((currentType === "movies" || currentType === "tvshows") && isOnDedicatedLibraryPage()) {
       const dataIdMap =
@@ -3410,8 +3813,16 @@
           if (token !== commandToken) return false;
         }
         if (!cmd.tabAlreadyActive) {
-          const clickedTab = await clickTextWhenReady(cmd.tabText, token);
-          if (!clickedTab) return false;
+          if (isModernLibraryPage()) {
+            const index = modernTabIndex(cmd.libraryType, cmd.tabText);
+            if (index === null) return false;
+            modernSwitchTab(index);
+            await waitForDomSettle();
+            if (token !== commandToken) return false;
+          } else {
+            const clickedTab = await clickTextWhenReady(cmd.tabText, token);
+            if (!clickedTab) return false;
+          }
         }
         if (cmd.subName) {
           await waitForDomSettle();
@@ -3457,7 +3868,7 @@
           return false;
         }
         if (serverId) params.set("serverId", serverId);
-        window.location.hash = `#/list.html?${params.toString()}`;
+        window.location.hash = `${jfcompat.routeUrl("list")}?${params.toString()}`;
         await waitForDomSettle();
         if (token !== commandToken) return false;
         if (cmd.filterChain) {
@@ -3466,7 +3877,7 @@
         return true;
       }
       case "search": {
-        window.location.hash = `#/search.html?query=${encodeURIComponent(cmd.term)}`;
+        window.location.hash = `${jfcompat.routeUrl("search")}?query=${encodeURIComponent(cmd.term)}`;
         return true;
       }
       case "submenuAction": {
@@ -3540,7 +3951,7 @@
         return await executeRandomOutcome(outerItem, cmd, token);
       }
       case "nav": {
-        window.location.hash = "#/home.html";
+        window.location.hash = jfcompat.routeUrl("home");
         await waitForDomSettle();
         if (token !== commandToken) return false;
         if (cmd.target === "home") {
