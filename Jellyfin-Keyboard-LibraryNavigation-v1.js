@@ -1,14 +1,15 @@
 (function () {
   "use strict";
 
-  /* jfcompat 1.0 - one script for Jellyfin web 10.10.7 and 12.1.
+  /* jfcompat 1.1 - one script for Jellyfin web 10.10.7 and 12.1 (1.1: layout
+   * setting scheme of 10.11 = 10.10, isModernLayoutModel).
    * Paste this block unchanged at the top of a script (inside its IIFE).
    * It is pure: no side effects at load, no globals except window.jfcompat
    * (set only when absent, for console checks; scripts use the local const).
    * Rule: on 10.10.7 every answer equals what the scripts computed before. */
   const jfcompat = (function () {
       'use strict';
-      const VERSION = '1.0';
+      const VERSION = '1.1';
 
       // ---------- version ----------
       // The web client ships with the server, so the server version decides.
@@ -28,12 +29,28 @@
           } catch (e) { /* ignore */ }
           return null;
       }
-      // 12.x model: modern layout default, routes without .html, legacy auth off.
-      // 10.11 was not audited; treated as the new model (live-check before relying on it).
+      // New model (>= 10.11): routes without .html, no Trailers tab on the
+      // Movies pages. Audited 2026-10-02 against web 10.11.11 (appRouter.js:404,
+      // moviesrecommended.js:229-241, apps/experimental/routes/movies/index.tsx:46-51).
+      // The layout setting is NOT part of it: 10.11 still has the 10.10 scheme,
+      // see isModernLayoutModel().
       function isNewModel() {
           const v = serverVersion();
           if (v) return v.major > 10 || (v.major === 10 && v.minor >= 11);
           return document.documentElement.hasAttribute('data-theme');
+      }
+
+      // Layout setting scheme of 12.x: modern by default, 'desktop-legacy' /
+      // 'mobile-legacy' / 'tv' classic (constants/layoutMode.ts, apphost.js
+      // 12.0:185-186). 10.10 and 10.11 instead: classic by default, MUI only for
+      // 'experimental' (layoutManager.js identical in 10.10.7 and 10.11.11,
+      // RootAppRouter.tsx 10.11.11:21-22). Without a server version the 12.x
+      // hint of isNewModel() decides (10.11 sets data-theme too; the DOM check
+      // in getLayout() comes first anyway).
+      function isModernLayoutModel() {
+          const v = serverVersion();
+          if (v) return v.major >= 12;
+          return isNewModel();
       }
 
       // ---------- routes ----------
@@ -92,7 +109,7 @@
           // 2) the setting, read the way each version reads it (not cached)
           let v = '';
           try { v = localStorage.getItem('layout') || ''; } catch (e) { /* ignore */ }
-          if (isNewModel()) return LEGACY_12.indexOf(v) >= 0 ? 'classic' : 'mui';
+          if (isModernLayoutModel()) return LEGACY_12.indexOf(v) >= 0 ? 'classic' : 'mui';
           return v === 'experimental' ? 'mui' : 'classic';
       }
       function isMui() { return getLayout() === 'mui'; }
@@ -208,7 +225,11 @@
       if (!window.jfcompat) window.jfcompat = api;
       return api;
   })();
-  /* end jfcompat 1.0 */
+  /* end jfcompat 1.1 */
+  // Loaded twice (Injector entry duplicated, old + test copy): the second copy
+  // stops here, so there is one buffer and one command per Enter (K-A17).
+  if (window.__jfKeyboardLibraryNav) return;
+  window.__jfKeyboardLibraryNav = true;
   const CONFIG = {
     idleResetMs: 2500, // ms of inactivity before the input buffer resets
     minLength: 1, // minimum characters before Enter triggers a command
@@ -324,21 +345,47 @@
     indicatorEl.style.color = CONFIG.indicatorColor;
     indicatorEl.style.opacity = text ? "1" : "0";
   }
-  function flashResult(ok) {
-    if (!CONFIG.showIndicator || !indicatorEl) return;
+  let flashTimer = null;
+  function flashResult(ok, text) {
+    if (!CONFIG.showIndicator) return;
+    ensureIndicator();
+    // Show the finished command in green/red (K-A10): processBuffer has already
+    // cleared text and opacity, so set both again. Never cover a new command
+    // that is being typed, and never hide one when the timer fires.
+    if (flashTimer) clearTimeout(flashTimer);
+    flashTimer = null;
+    if (buffer) return;
+    indicatorEl.textContent = text || "";
     indicatorEl.style.color = ok ? "#4caf50" : "#f44336";
-    setTimeout(() => {
-      indicatorEl.style.opacity = "0";
+    indicatorEl.style.opacity = text ? "1" : "0";
+    flashTimer = setTimeout(() => {
+      flashTimer = null;
+      if (!buffer) indicatorEl.style.opacity = "0";
     }, 700);
   }
   function isVideoPlaying() {
-    return document.querySelectorAll("video").length > 0;
+    // Only real playback (K-A5): the video route, or the fullscreen player
+    // container (htmlVideoPlayer/plugin.js 10.10.7:1645-1646). A theme video on a
+    // details page (themeMediaPlayer.js, fullscreen:false) or another script's
+    // <video> no longer switches the keyboard off.
+    return jfcompat.isRoute("video") || !!document.querySelector(".videoPlayerContainer-onTop video");
   }
+  // The main player's <video> for chapter/percent seek (K-A5), never a theme video.
+  function findPlaybackVideo() {
+    const onTop = document.querySelector(".videoPlayerContainer-onTop video");
+    if (onTop) return onTop;
+    if (!jfcompat.isRoute("video")) return null;
+    return document.querySelector(".videoPlayerContainer video") || document.querySelector("video");
+  }
+  // Input types that take no typed text: Jellyfin's own rule
+  // (scripts/keyboardNavigation.js 10.10.7:61, 12.1:101). After a click on a
+  // checkbox, radio or button input K keeps working (K-C7).
+  const NON_TEXT_INPUT_TYPES = ["button", "checkbox", "color", "file", "hidden", "image", "radio", "reset", "submit"];
   function isTypingInRealField(target) {
     if (!target) return false;
     const tag = target.tagName;
+    if (tag === "INPUT") return NON_TEXT_INPUT_TYPES.indexOf(String(target.type || "").toLowerCase()) < 0;
     return (
-      tag === "INPUT" ||
       tag === "TEXTAREA" ||
       tag === "SELECT" ||
       target.isContentEditable
@@ -357,12 +404,27 @@
     if (isVideoPlaying()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === "Enter") {
+      // Only swallow Enter for a typed command (K-A1). Otherwise the browser
+      // activates the focused card/button/link (TV remote OK key); Jellyfin's own
+      // key handler has no Enter case (scripts/keyboardNavigation.js).
+      if (buffer.trim().length < CONFIG.minLength) {
+        if (buffer) resetBuffer();
+        return;
+      }
       e.preventDefault();
+      // A focused checkbox/radio (K-C7) has its own Enter handler (emby-checkbox,
+      // emby-radio); the Enter that runs a command must not toggle it too.
+      if (document.activeElement && document.activeElement.tagName === "INPUT") e.stopPropagation();
       processBuffer();
       return;
     }
     if (e.key === "Escape") {
-      resetBuffer();
+      // Only take Escape when there is a buffer to clear (K-A1); with an empty
+      // buffer Jellyfin's "back" (TV layout) and dialog closing run as normal.
+      if (buffer) {
+        e.preventDefault();
+        resetBuffer();
+      }
       return;
     }
     if (e.key === "Backspace") {
@@ -371,7 +433,8 @@
       scheduleIdleReset();
       return;
     }
-    if (e.key.length === 1) {
+    // Synthetic keydown events can come without a key (K-A18).
+    if (typeof e.key === "string" && e.key.length === 1) {
       if (e.key === " " && CONFIG.preventSpaceScroll === "smart" && buffer.length === 0) {
         return;
       }
@@ -587,7 +650,122 @@
     }
     return null;
   }
-  function findFilterSection(labels) {
+  // Language-free filter lookup (K-C1, K-A2). Jellyfin has two filter UIs with the
+  // same markup in 10.10.7 and 12.1: components/filterdialog/filterdialog.template.html
+  // (library pages: movies.js, tvshows.js, episodes.js ...) and
+  // components/filtermenu/filtermenu.template.html (list page). Their label texts
+  // differ ("Resumable" vs "Continue watching", "Special Features" vs "Extras" ...)
+  // and are translated; the classes, ids and data attributes are not.
+  const FILTERS_CHECKBOX_SELECTORS = {
+    IsPlayed: ['.chkStandardFilter[data-filter="IsPlayed"]', ".chkPlayed"],
+    IsUnplayed: ['.chkStandardFilter[data-filter="IsUnPlayed"]', ".chkUnplayed"],
+    IsResumable: ['.chkStandardFilter[data-filter="IsResumable"]', ".chkResumable"],
+    IsFavorite: ['.chkStandardFilter[data-filter="IsFavorite"]', ".chkFavorite"],
+  };
+  const FEATURES_CHECKBOX_SELECTORS = {
+    HasSubtitles: ["#chkSubtitle", ".chkSubtitle"],
+    HasTrailer: ["#chkTrailer", ".chkTrailer"],
+    HasSpecialFeature: ["#chkSpecialFeature", ".chkSpecialFeature"],
+    HasThemeSong: ["#chkThemeSong", ".chkThemeSong"],
+    HasThemeVideo: ["#chkThemeVideo", ".chkThemeVideo"],
+  };
+  const VIDEOTYPE_CHECKBOX_SELECTORS = {
+    hd: [".chkHDFilter"],
+    sd: [".chkSDFilter"],
+    "4k": [".chk4KFilter"],
+    "3d": [".chk3DFilter"],
+    bd: ['.chkVideoTypeFilter[data-filter="Bluray"]'],
+    bluray: ['.chkVideoTypeFilter[data-filter="Bluray"]'],
+    "blu-ray": ['.chkVideoTypeFilter[data-filter="Bluray"]'],
+    dvd: ['.chkVideoTypeFilter[data-filter="Dvd"]'],
+  };
+  // Server values (genre, tag, year, rating) carry data-filter="<value>" (filterdialog.js renderOptions).
+  const CATEGORY_DATA_FILTER_CLASS = {
+    Genres: ".chkGenreFilter",
+    Tags: ".chkTagFilter",
+    Years: ".chkYearFilter",
+    OfficialRatings: ".chkOfficialRatingFilter",
+  };
+  // Section containers by class (both templates), before the translated titles.
+  const CATEGORY_SECTION_CLASSES = {
+    Features: [".features", ".featureSection"],
+    Genres: [".genreFilters"],
+    OfficialRatings: [".officialRatingFilters"],
+    Tags: [".tagFilters"],
+    VideoTypes: [".videoTypeFilters", '[data-settingname="VideoType"]'],
+    Years: [".yearFilters"],
+  };
+  function resolveFilterCheckboxSelectors(category, raw) {
+    const lower = raw.toLowerCase().trim();
+    if (category === "Filters") return FILTERS_CHECKBOX_SELECTORS[FILTERS_VALUE_MAP[lower]] || [];
+    if (category === "Features") return FEATURES_CHECKBOX_SELECTORS[FEATURES_VALUE_MAP[lower]] || [];
+    if (category === "VideoTypes") return VIDEOTYPE_CHECKBOX_SELECTORS[lower] || [];
+    return [];
+  }
+  // The open dialogHelper dialog (dialogHelper.js adds "opened"), else the last container.
+  function getOpenDialog() {
+    const opened = document.querySelectorAll(".dialogContainer .dialog.opened");
+    if (opened.length) return opened[opened.length - 1];
+    const containers = document.querySelectorAll(".dialogContainer");
+    return containers.length ? containers[containers.length - 1] : null;
+  }
+  // Lookup inside the open dialog (K-A3 side remark): viewContainer.js keeps up to
+  // 3 pages in the DOM, so a document-wide .btnCancel / .selectImageType could
+  // belong to a cached page. Without an open dialog: the document, as before.
+  function queryInOpenDialog(sel) {
+    return (getOpenDialog() || document).querySelector(sel);
+  }
+  // Checkbox for one filter value: attributes first, the English label only as fallback.
+  function findFilterCheckbox(scope, category, raw, uiLabel) {
+    const dialogScope = getOpenDialog() || document;
+    for (const sel of resolveFilterCheckboxSelectors(category, raw)) {
+      const el = dialogScope.querySelector(sel);
+      if (el) return { checkbox: el, label: el.closest("label") };
+    }
+    const dfClass = CATEGORY_DATA_FILTER_CLASS[category];
+    if (dfClass) {
+      const target = raw.toLowerCase().trim();
+      for (const el of dialogScope.querySelectorAll(`${dfClass}[data-filter]`)) {
+        if ((el.getAttribute("data-filter") || "").toLowerCase().trim() === target) return { checkbox: el, label: el.closest("label") };
+      }
+    }
+    if (uiLabel) {
+      const label = findByExactText("label", uiLabel, scope);
+      if (label) return { checkbox: label.querySelector('input[type="checkbox"]'), label };
+    }
+    return null;
+  }
+  function waitForFilterCheckbox(scope, category, raw, uiLabel, token, timeoutMs = 4000, intervalMs = 150) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const tryFind = () => {
+        if (token !== commandToken) {
+          resolve(null);
+          return;
+        }
+        const found = findFilterCheckbox(scope, category, raw, uiLabel);
+        if (found) {
+          resolve(found);
+          return;
+        }
+        if (Date.now() - start > timeoutMs) {
+          resolve(null);
+          return;
+        }
+        setTimeout(tryFind, intervalMs);
+      };
+      tryFind();
+    });
+  }
+  function findFilterSection(labels, category) {
+    // By class inside the open dialog first (K-C1/K-A2), then by the English title.
+    const dlg = getOpenDialog();
+    if (dlg && CATEGORY_SECTION_CLASSES[category]) {
+      for (const sel of CATEGORY_SECTION_CLASSES[category]) {
+        const el = dlg.querySelector(sel);
+        if (el) return { scope: el, needsExpand: el.getAttribute("is") === "emby-collapse" };
+      }
+    }
     const targets = labels.map((l) => l.toLowerCase().trim());
     const collapseSections = document.querySelectorAll('[is="emby-collapse"]');
     for (const el of collapseSections) {
@@ -614,28 +792,6 @@
     const header =
       el.querySelector("button, .emby-collapsible-header, .emby-collapsible-button, h2, h3") || el;
     header.click();
-  }
-  function waitForLabelInScope(scope, text, token, timeoutMs = 4000, intervalMs = 150) {
-    return new Promise((resolve) => {
-      const start = Date.now();
-      const tryFind = () => {
-        if (token !== commandToken) {
-          resolve(null);
-          return;
-        }
-        const label = findByExactText("label", text, scope);
-        if (label) {
-          resolve(label);
-          return;
-        }
-        if (Date.now() - start > timeoutMs) {
-          resolve(null);
-          return;
-        }
-        setTimeout(tryFind, intervalMs);
-      };
-      tryFind();
-    });
   }
   const FILTER_BUTTON_SELECTORS = [
     '[title="Filter"]',
@@ -824,6 +980,29 @@
       tryClick();
     });
   }
+  // First visible element for a selector, polled (K-A3).
+  function waitForVisibleElement(selector, token, timeoutMs = 3000, intervalMs = 150) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const tryFind = () => {
+        if (token !== commandToken) {
+          resolve(null);
+          return;
+        }
+        const el = [...document.querySelectorAll(selector)].find((c) => c.offsetParent !== null);
+        if (el) {
+          resolve(el);
+          return;
+        }
+        if (Date.now() - start > timeoutMs) {
+          resolve(null);
+          return;
+        }
+        setTimeout(tryFind, intervalMs);
+      };
+      tryFind();
+    });
+  }
   const DIALOG_CLOSE_SELECTORS = [
     ".dlgFilter .btnCloseDialog",
     ".formDialogHeader .btnCloseDialog",
@@ -848,9 +1027,27 @@
     }
     return false;
   }
+  // Removes only what no open dialog owns any more (K-A13). ".dialog" is the
+  // dialog itself (dialogHelper.js 10.10.7:463, 12.1:466); cutting a live or
+  // still-animating one (it keeps .opened until its exit animation ends) left
+  // backdrop, body.noScroll and its history entry behind. The backdrop is a
+  // body-level sibling of .dialogContainer (10.10.7:198-201, 12.1:201-204).
   function removeOrphanedDialogBackdrops() {
-    const leftovers = document.querySelectorAll(".dialog");
-    leftovers.forEach((el) => el.remove());
+    document.querySelectorAll(".dialogContainer").forEach((c) => {
+      if (!c.querySelector(".dialog.opened")) c.remove();
+    });
+    if (!document.querySelector(".dialog.opened")) {
+      document.querySelectorAll(".dialogBackdrop").forEach((b) => b.remove());
+    }
+  }
+  // True when the current history entry belongs to an open Jellyfin dialog, so
+  // history.back() closes that dialog and does not leave the page (K-A13).
+  // The router history (RootAppRouter.tsx 10.10.7:22,36, 12.1:22,37) keeps the
+  // dialogHelper state under history.state.usr (dialogHelper.js 10.10.7:177-187).
+  function historyHasDialog() {
+    const st = window.history.state;
+    const dialogs = st && st.usr && st.usr.dialogs;
+    return !!(dialogs && dialogs.length > 0);
   }
   function waitWhile(conditionFn, timeoutMs, intervalMs = 100) {
     return new Promise((resolve) => {
@@ -886,8 +1083,10 @@
         }
       }
     }
-    window.history.back();
-    await waitWhile(isFilterDialogOpen, 400);
+    if (historyHasDialog()) {
+      window.history.back();
+      await waitWhile(isFilterDialogOpen, 400);
+    }
     if (!isFilterDialogOpen()) {
       removeOrphanedDialogBackdrops();
       return true;
@@ -910,7 +1109,10 @@
     if (!opened) return false;
     await waitForDomSettle(300, 1200);
     if (token !== commandToken) return false;
-    const resetBtn = document.querySelector(".resetFilters");
+    // Only inside the open filter dialog (K-C4): the sweep below used to uncheck
+    // every checked emby-checkbox in the document, cached settings pages included.
+    const resetScope = getOpenDialog();
+    const resetBtn = (resetScope || document).querySelector(".resetFilters");
     if (resetBtn) {
       resetBtn.click();
       await waitForDomSettle(150, 600);
@@ -919,8 +1121,8 @@
       console.warn("[SilentSearch] Reset filter button not found");
     }
     let totalUnchecked = 0;
-    for (let attempt = 0; attempt < 30; attempt++) {
-      const allBoxes = document.querySelectorAll('input[type="checkbox"][is="emby-checkbox"]');
+    for (let attempt = 0; attempt < 30 && resetScope; attempt++) {
+      const allBoxes = resetScope.querySelectorAll('input[type="checkbox"][is="emby-checkbox"]');
       const checkedBox = [...allBoxes].find((b) => b.checked === true);
       if (!checkedBox) break;
       checkedBox.click();
@@ -946,7 +1148,7 @@
       const sectionLabels = CATEGORY_SECTION_HEADERS[category];
       let scope = document;
       if (sectionLabels) {
-        const section = findFilterSection(sectionLabels);
+        const section = findFilterSection(sectionLabels, category);
         if (section) {
           scope = section.scope;
           if (section.needsExpand && !isCollapseExpanded(section.scope)) {
@@ -960,19 +1162,21 @@
       }
       for (const raw of values) {
         const uiLabel = resolveUiLabel(category, raw);
-        if (!uiLabel) {
+        if (!uiLabel && resolveFilterCheckboxSelectors(category, raw).length === 0) {
           allOk = false;
           continue;
         }
         let success = false;
         let notFound = false;
         for (let attempt = 0; attempt < 2 && !success; attempt++) {
-          const label = await waitForLabelInScope(scope, uiLabel, token);
-          if (!label) {
+          // Attribute lookup first, English label as fallback (K-C1).
+          const found = await waitForFilterCheckbox(scope, category, raw, uiLabel, token);
+          if (!found) {
             notFound = true;
             break;
           }
-          const checkbox = label.querySelector('input[type="checkbox"]');
+          const label = found.label;
+          const checkbox = found.checkbox;
           if (checkbox) {
             if (checkbox.checked !== desiredChecked) {
               checkbox.click();
@@ -982,20 +1186,20 @@
               checkbox.dispatchEvent(new Event("input", { bubbles: true }));
               checkbox.dispatchEvent(new Event("change", { bubbles: true }));
             }
-          } else {
+          } else if (label) {
             label.click();
           }
           await waitForDomSettle(150, 500);
           if (token !== commandToken) return false;
-          const recheckLabel = findByExactText("label", uiLabel, scope);
-          const recheckBox = recheckLabel ? recheckLabel.querySelector('input[type="checkbox"]') : null;
+          const recheck = findFilterCheckbox(scope, category, raw, uiLabel);
+          const recheckBox = recheck ? recheck.checkbox : null;
           success = !!(recheckBox && recheckBox.checked === desiredChecked && document.contains(recheckBox));
         }
         if (notFound) {
-          console.warn(`[SilentSearch] Checkbox "${uiLabel}" (category "${category}") not found`);
+          console.warn(`[SilentSearch] Checkbox "${uiLabel || raw}" (category "${category}") not found`);
           allOk = false;
         } else if (!success) {
-          console.warn(`[SilentSearch] Checkbox "${uiLabel}" did not stay in the desired state`);
+          console.warn(`[SilentSearch] Checkbox "${uiLabel || raw}" did not stay in the desired state`);
           allOk = false;
         }
       }
@@ -1473,27 +1677,30 @@
       )
     ),
   };
+  // ids = the action sheet data-id of each item (components/itemContextMenu.js, same in
+  // 10.10.7 and 12.1); the English text is only the fallback (K-A2). Menu order is kept
+  // for "download": Download All comes before Download, as the old startsWith match did.
   const SUBMENU_ITEM_PHRASES = {
-    "add to collection": { match: "exact", text: "Add to collection" },
-    addtocollection: { match: "exact", text: "Add to collection" },
-    "add to playlist": { match: "exact", text: "Add to playlist" },
-    addtoplaylist: { match: "exact", text: "Add to playlist" },
-    download: { match: "startsWith", text: "Download" },
-    "copy stream url": { match: "exact", text: "Copy Stream URL" },
-    copystreamurl: { match: "exact", text: "Copy Stream URL" },
-    "edit metadata": { match: "exact", text: "Edit metadata" },
-    editmetadata: { match: "exact", text: "Edit metadata" },
-    "edit images": { match: "exact", text: "Edit images" },
-    editimages: { match: "exact", text: "Edit images" },
-    "edit subtitles": { match: "exact", text: "Edit subtitles" },
-    editsubtitles: { match: "exact", text: "Edit subtitles" },
-    identify: { match: "exact", text: "Identify" },
-    "media info": { match: "exact", text: "Media Info" },
-    mediainfo: { match: "exact", text: "Media Info" },
-    "refresh metadata": { match: "exact", text: "Refresh metadata" },
-    refreshmetadata: { match: "exact", text: "Refresh metadata" },
-    share: { match: "exact", text: "Share" },
-    delete: { match: "startsWith", text: "Delete" },
+    "add to collection": { match: "exact", text: "Add to collection", ids: ["addtocollection"] },
+    addtocollection: { match: "exact", text: "Add to collection", ids: ["addtocollection"] },
+    "add to playlist": { match: "exact", text: "Add to playlist", ids: ["addtoplaylist"] },
+    addtoplaylist: { match: "exact", text: "Add to playlist", ids: ["addtoplaylist"] },
+    download: { match: "startsWith", text: "Download", ids: ["downloadall", "download"] },
+    "copy stream url": { match: "exact", text: "Copy Stream URL", ids: ["copy-stream"] },
+    copystreamurl: { match: "exact", text: "Copy Stream URL", ids: ["copy-stream"] },
+    "edit metadata": { match: "exact", text: "Edit metadata", ids: ["edit"] },
+    editmetadata: { match: "exact", text: "Edit metadata", ids: ["edit"] },
+    "edit images": { match: "exact", text: "Edit images", ids: ["editimages"] },
+    editimages: { match: "exact", text: "Edit images", ids: ["editimages"] },
+    "edit subtitles": { match: "exact", text: "Edit subtitles", ids: ["editsubtitles"] },
+    editsubtitles: { match: "exact", text: "Edit subtitles", ids: ["editsubtitles"] },
+    identify: { match: "exact", text: "Identify", ids: ["identify"] },
+    "media info": { match: "exact", text: "Media Info", ids: ["moremediainfo"] },
+    mediainfo: { match: "exact", text: "Media Info", ids: ["moremediainfo"] },
+    "refresh metadata": { match: "exact", text: "Refresh metadata", ids: ["refresh"] },
+    refreshmetadata: { match: "exact", text: "Refresh metadata", ids: ["refresh"] },
+    share: { match: "exact", text: "Share", ids: ["share"] },
+    delete: { match: "startsWith", text: "Delete", ids: ["delete"] },
   };
   const PREFIXABLE_DETAILS_ACTIONS = { ...DETAILS_ACTION_PHRASES };
   delete PREFIXABLE_DETAILS_ACTIONS.play;
@@ -1679,11 +1886,98 @@
     const active = document.querySelector(".emby-tab-button-active .emby-button-foreground");
     return active ? active.textContent.trim() : null;
   }
-  function waitForActiveTab(expectedText, timeoutMs = 2000, intervalMs = 100) {
+  // Legacy tab bars by position, not by translated text (K-A2). mainTabsManager
+  // renders the page's getTabs() as .headerTabs .emby-tab-button[data-index=N]
+  // (components/maintabsmanager.js:106-123, same in 12.1). Tab order per page:
+  // movies controllers/movies/moviesrecommended.js getTabs (10.10.7:229-241,
+  // 12.1 apps/legacy/...:230-240 - no Trailers tab in 12.x), tv shows/tvrecommended.js
+  // getTabs, livetv livetvsuggested.js getTabs, home controllers/home.js getTabs.
+  const LEGACY_TAB_ORDER_OLD = {
+    movies: ["Movies", "Suggestions", "Trailers", "Favorites", "Collections", "Genres"],
+    tv: ["Shows", "Suggestions", "Upcoming", "Genres", "TV Networks", "Episodes"],
+    livetv: ["Programs", "Guide", "Channels", "Recordings", "Schedule", "Series"],
+    home: ["Home", "Favorites"],
+  };
+  const LEGACY_TAB_ORDER_NEW = {
+    ...LEGACY_TAB_ORDER_OLD,
+    movies: ["Movies", "Suggestions", "Favorites", "Collections", "Genres"],
+  };
+  const LIBRARY_TYPE_ROUTE = { movies: "movies", tvshows: "tv", livetv: "livetv" };
+  function legacyTabOrder(routeName) {
+    return (jfcompat.isNewModel() ? LEGACY_TAB_ORDER_NEW : LEGACY_TAB_ORDER_OLD)[routeName] || null;
+  }
+  // The header tab bar element; setTabs() replaces it when another page takes over.
+  function getHeaderTabsElement() {
+    return document.querySelector(".headerTabs .tabs-viewmenubar");
+  }
+  // Before a jump to <routeName>: the bar that is NOT the target page's yet.
+  function staleTabsBefore(routeName) {
+    return jfcompat.isRoute(routeName) ? null : getHeaderTabsElement();
+  }
+  // The header tab buttons, only when they belong to this page: right route, the
+  // page's tab count, and not the bar that was there before K's jump (movies, tv
+  // and livetv all have 6 tabs on 10.10.7; movies.js calls setTabs only on viewshow).
+  function getOwnedTabButtons(routeName, staleTabs) {
+    const order = legacyTabOrder(routeName);
+    if (!order || !jfcompat.isRoute(routeName)) return null;
+    const bar = getHeaderTabsElement();
+    if (!bar || (staleTabs && bar === staleTabs)) return null;
+    const buttons = bar.querySelectorAll(".emby-tab-button");
+    return buttons.length === order.length ? buttons : null;
+  }
+  // Is the tab <label> active on <routeName>? Position first, English text as fallback.
+  function legacyTabIs(routeName, label) {
+    const buttons = getOwnedTabButtons(routeName);
+    if (buttons) {
+      const active = [...buttons].find((b) => b.classList.contains("emby-tab-button-active"));
+      return !!active && active.getAttribute("data-index") === String(legacyTabOrder(routeName).indexOf(label));
+    }
+    return getCurrentActiveTabText() === label;
+  }
+  // Click a tab by its position; the English text only after half the wait, so a
+  // stale bar of the previous page is not clicked by text (K-A2).
+  function clickTabWhenReady(routeName, label, token, staleTabs, timeoutMs = 5000, intervalMs = 150) {
+    const order = legacyTabOrder(routeName);
+    const index = order ? order.indexOf(label) : -1;
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const tryClick = () => {
+        if (token !== commandToken) {
+          resolve(false);
+          return;
+        }
+        if (index >= 0) {
+          const buttons = getOwnedTabButtons(routeName, staleTabs);
+          if (buttons && buttons[index]) {
+            buttons[index].click();
+            resolve(true);
+            return;
+          }
+        }
+        if (index < 0 || Date.now() - start > timeoutMs / 2) {
+          for (const el of document.querySelectorAll(".emby-button-foreground")) {
+            if (el.textContent.trim().toLowerCase() === label.toLowerCase()) {
+              const btn = el.closest("button") || el.closest("a") || el;
+              btn.click();
+              resolve(true);
+              return;
+            }
+          }
+        }
+        if (Date.now() - start > timeoutMs) {
+          resolve(false);
+          return;
+        }
+        setTimeout(tryClick, intervalMs);
+      };
+      tryClick();
+    });
+  }
+  function waitForActiveTab(routeName, expectedText, timeoutMs = 2000, intervalMs = 100) {
     return new Promise((resolve) => {
       const start = Date.now();
       const check = () => {
-        if (getCurrentActiveTabText() === expectedText) {
+        if (legacyTabIs(routeName, expectedText)) {
           resolve(true);
           return;
         }
@@ -1970,8 +2264,8 @@
         return { type: "detailsAction", action: DETAILS_ACTION_PHRASES[lowerFull] };
       }
       if (SUBMENU_ITEM_PHRASES[lowerFull]) {
-        const { match, text } = SUBMENU_ITEM_PHRASES[lowerFull];
-        return { type: "submenuAction", match, text };
+        const { match, text, ids } = SUBMENU_ITEM_PHRASES[lowerFull];
+        return { type: "submenuAction", match, text, ids };
       }
       if (
         allTokens.length === 2 &&
@@ -2089,7 +2383,7 @@
           }
         }
       }
-      if (getCurrentActiveTabText() === "Genres") {
+      if (isGenresTabActive()) {
         const currentType = await detectCurrentLibraryType();
         if (currentType && GENRE_TAB_TEXT[currentType] && findSectionHeading(trimmed)) {
           return {
@@ -2293,14 +2587,17 @@
     const library = await resolveLibrary(term);
     if (library) {
       const hash = buildLibraryHash(library, mappedType);
+      const staleTabs = staleTabsBefore(LIBRARY_TYPE_ROUTE[mappedType]);
       window.location.hash = hash;
       if (PRIMARY_TAB_TEXT[mappedType]) {
         await waitForDomSettle();
         if (token !== undefined && token !== commandToken) return true;
         if (isModernLibraryPage()) {
-          if (jfcompat.getRoute().params.get("tab") !== "0") modernSwitchTab(0);
+          // replace: the jump above already made the history entry (K-A8).
+          if (jfcompat.getRoute().params.get("tab") !== "0") modernSwitchTab(0, true);
         } else {
-          await clickTextWhenReady(PRIMARY_TAB_TEXT[mappedType], token);
+          // First tab by position, English text as fallback (K-A2).
+          await clickTabWhenReady(LIBRARY_TYPE_ROUTE[mappedType], PRIMARY_TAB_TEXT[mappedType], token, staleTabs);
         }
       }
       if (filterChain) {
@@ -2355,15 +2652,47 @@
     }
     return Array.from(seen.values());
   }
+  // Exact-match fallback list (K-A16): pages of 2000 via StartIndex until the
+  // server's TotalRecordCount is reached (at most FETCH_ALL_MAX_PAGES pages), so
+  // titles beyond the first 2000 are found. Libraries up to 2000 items: one
+  // request, as before.
+  const FETCH_ALL_PAGE = 2000;
+  const FETCH_ALL_MAX_PAGES = 10;
   async function fetchAllOfType(includeTypes, extraParams) {
+    if (!window.ApiClient) return [];
+    const all = [];
+    try {
+      for (let page = 0; page < FETCH_ALL_MAX_PAGES; page++) {
+        const query = {
+          IncludeItemTypes: includeTypes,
+          Recursive: true,
+          Fields: "OriginalTitle,ProductionYear",
+          Limit: FETCH_ALL_PAGE,
+          ...filterParamsToQueryObject(extraParams),
+        };
+        if (page > 0) query.StartIndex = page * FETCH_ALL_PAGE;
+        const result = await window.ApiClient.getItems(getUserId(), query);
+        const items = (result && result.Items) || [];
+        items.forEach((i) => all.push(i));
+        const total = result && typeof result.TotalRecordCount === "number" ? result.TotalRecordCount : 0;
+        if (items.length < FETCH_ALL_PAGE || all.length >= total) break;
+      }
+    } catch (err) {
+      // keep what was fetched (first page failing = [] as before)
+    }
+    return all;
+  }
+  // One item picked by the server (K-A16): random over the whole library instead
+  // of over the first 2000 of a list.
+  async function fetchRandomOfType(includeTypes) {
     if (!window.ApiClient) return [];
     try {
       const result = await window.ApiClient.getItems(getUserId(), {
         IncludeItemTypes: includeTypes,
         Recursive: true,
+        SortBy: "Random",
+        Limit: 1,
         Fields: "OriginalTitle,ProductionYear",
-        Limit: 2000,
-        ...filterParamsToQueryObject(extraParams),
       });
       return (result && result.Items) || [];
     } catch (err) {
@@ -2578,16 +2907,27 @@
       return [];
     }
   }
+  // Persons fallback list (K-A16). 12.x pages via StartIndex
+  // (PersonsController.cs 12.1:75); 10.10.7's /Persons has no startIndex
+  // (PersonsController.cs 10.10.7:67-80), so there it stays one page of 2000.
   async function fetchAllPersons() {
     if (!window.ApiClient) return [];
+    const all = [];
+    const pages = jfcompat.isNewModel() ? FETCH_ALL_MAX_PAGES : 1;
     try {
-      const result = await window.ApiClient.getJSON(
-        personsUrl({ UserId: getUserId(), Limit: 2000 })
-      );
-      return (result && result.Items) || [];
+      for (let page = 0; page < pages; page++) {
+        const params = { UserId: getUserId(), Limit: FETCH_ALL_PAGE };
+        if (page > 0) params.StartIndex = page * FETCH_ALL_PAGE;
+        const result = await window.ApiClient.getJSON(personsUrl(params));
+        const items = (result && result.Items) || [];
+        items.forEach((i) => all.push(i));
+        const total = result && typeof result.TotalRecordCount === "number" ? result.TotalRecordCount : 0;
+        if (items.length < FETCH_ALL_PAGE || all.length >= total) break;
+      }
     } catch (err) {
-      return [];
+      // keep what was fetched
     }
+    return all;
   }
   async function resolvePersonFor(cmd) {
     for (const candidate of cmd.titleCandidates) {
@@ -2716,6 +3056,30 @@
   function pickRandom(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
   }
+  // parentId / topParentId of the current page (as detectCurrentLibraryType reads it).
+  function getCurrentPageParentId() {
+    const hash = window.location.hash || "";
+    const queryString = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : "";
+    const params = new URLSearchParams(queryString);
+    return params.get("parentId") || params.get("topParentId");
+  }
+  // One random item of a type below a library (K-C5).
+  async function fetchRandomInParent(includeTypes, parentId) {
+    if (!window.ApiClient || !parentId) return [];
+    try {
+      const result = await window.ApiClient.getItems(getUserId(), {
+        ParentId: parentId,
+        IncludeItemTypes: includeTypes,
+        Recursive: true,
+        SortBy: "Random",
+        Limit: 1,
+        Fields: "OriginalTitle,ProductionYear",
+      });
+      return (result && result.Items) || [];
+    } catch (err) {
+      return [];
+    }
+  }
   async function getContextRandomPool(innerLevel) {
     const current = await getCurrentDetailsItem();
     if (current) {
@@ -2739,13 +3103,19 @@
     }
     if (!isLibraryFilterActive()) {
       const libType = await detectCurrentLibraryType();
-      if (libType === "movies") return await fetchAllOfType("Movie");
-      if (libType === "tvshows") return await fetchAllOfType("Series");
-      if (libType === "boxsets") return await fetchAllOfType("BoxSet");
+      const libItemType = { movies: "Movie", tvshows: "Series", boxsets: "BoxSet" }[libType];
+      if (libItemType) {
+        // Only THIS library (K-C5): ParentId + one random pick by the server, so a
+        // second movie library and the 2000-item cap do not matter. Falls back to
+        // the old all-libraries list only if that returns nothing.
+        const inLibrary = await fetchRandomInParent(libItemType, getCurrentPageParentId());
+        if (inLibrary.length) return inLibrary;
+        return await fetchRandomOfType(libItemType);
+      }
     }
     const urlPool = await getUrlBasedRandomPool();
     if (urlPool) return urlPool;
-    return await fetchAllOfType("Movie,Series,BoxSet");
+    return await fetchRandomOfType("Movie,Series,BoxSet");
   }
   async function getUrlBasedRandomPool() {
     if (!window.ApiClient) return null;
@@ -2871,25 +3241,66 @@
     return jfcompat.isRoute("movies", "tv");
   }
   // ============================================================
-  // Jellyfin 12.x modern library pages (React/MUI)
+  // React library pages: 12.x modern layout + 10.10.7 "experimental" layout
   // ============================================================
-  // In the 12.x default layout the movies / tv / collections library pages
-  // are React. The legacy sort, view and filter dialogs (.btnSort,
-  // .btnSelectView, emby-collapse ...) do not exist there. Instead each
-  // library + tab keeps its settings in localStorage under
-  // "<viewType> - <libraryId>" and re-reads them on a "local-storage" event
-  // (usehooks-ts useLocalStorage, apps/modern/features/libraries/hooks/
-  // useLibrary.tsx). Setting that object works in every UI language.
-  // 10.10.x never gets here: jfcompat.isReactLibraryPage() is false there.
+  // In the 12.x default layout the library pages are React. The legacy sort,
+  // view and filter dialogs (.btnSort, .btnSelectView, emby-collapse ...) do
+  // not exist there. Instead each library + tab keeps its settings in
+  // localStorage under "<viewType> - <settingsKey>" and re-reads them on a
+  // "local-storage" event (usehooks-ts useLocalStorage, apps/modern/features/
+  // libraries/hooks/useLibrary.tsx:50-53). Setting that object works in every
+  // UI language. settingsKey = topParentId, or "livetv" on /livetv
+  // (hooks/useCurrentTab.ts:9-10).
+  // 10.10.7 "experimental" (K-A4): movies/tv/music/livetv/homevideos are React
+  // too (apps/experimental/routes/asyncRoutes/user.ts:8-14), same key
+  // (utils/items.ts:145-147), but its own hook (hooks/useLocalStorage.tsx:3-20)
+  // reads the key only when the view mounts and has no storage listener. The
+  // view is keyed "<viewType> - <libraryId>" (apps/experimental/routes/movies/
+  // index.tsx:71-74), so after the write the tab is switched away and back
+  // (location.replace, no history entries) to remount it. SortBy is one string
+  // there, not an array (types/library.ts:56), ShowYear defaults to false.
+  // Tab order = the views per route, 12.x: apps/modern/features/libraries/
+  // constants/views/*.ts (= libraryRoutes.ts); 10.10.7: apps/experimental/
+  // components/tabs/tabRoutes.ts + routes/<page>/index.tsx tab mappings.
   const MODERN_TAB_VIEWS = {
     movies: ["movies", "suggestions", "favorites", "collections", "genres", "studios", "playlists"],
     tv: ["series", "suggestions", "upcoming", "genres", "studios", "episodes", "collections", "playlists"],
     boxsets: ["collections", "favorites", "genres"],
+    // K-A6: the other 12.x React library pages.
+    livetv: ["programs", "guide", "channels", "recordings", "schedule", "seriestimers"],
+    music: ["albums", "suggestions", "albumartists", "artists", "playlists", "songs", "genres", "collections"],
+    homevideos: ["folders", "photos", "photoalbums", "videos"],
+    musicvideos: ["folders", "suggestions", "musicvideos", "playlists"],
+    books: ["folders", "books", "authors", "suggestions", "genres", "collections", "favorites"],
+    playlists: ["playlists", "favorites"],
+    mixed: ["folders", "suggestions", "mixed", "collections", "playlists"],
   };
-  // Legacy tab text -> 12.x tab index (constants/views/*.ts); no Trailers tab in 12.x.
-  const MODERN_TAB_INDEX = {
-    movies: { Movies: 0, Suggestions: 1, Favorites: 2, Collections: 3, Genres: 4 },
-    tvshows: { Shows: 0, Suggestions: 1, Upcoming: 2, Genres: 3, "TV Networks": 4, Episodes: 5 },
+  const EXPERIMENTAL_TAB_VIEWS = {
+    movies: ["movies", "suggestions", "trailers", "favorites", "collections", "genres"],
+    tv: ["series", "suggestions", "upcoming", "genres", "networks", "episodes"],
+    livetv: ["programs", "guide", "channels", "recordings", "schedule", "seriestimers"],
+    music: ["albums", "suggestions", "albumartists", "artists", "playlists", "songs", "genres"],
+    homevideos: ["photos", "photoalbums", "videos"],
+  };
+  const EXPERIMENTAL_LIBRARY_ROUTES = Object.keys(EXPERIMENTAL_TAB_VIEWS);
+  // Legacy tab text (LIBRARY_TAB_PHRASES) -> React view name(s).
+  const TAB_TEXT_VIEWS = {
+    Movies: ["movies"],
+    Suggestions: ["suggestions"],
+    Trailers: ["trailers"],
+    Favorites: ["favorites"],
+    Collections: ["collections"],
+    Genres: ["genres"],
+    Shows: ["series"],
+    Upcoming: ["upcoming"],
+    "TV Networks": ["studios", "networks"],
+    Episodes: ["episodes"],
+    Programs: ["programs"],
+    Guide: ["guide"],
+    Channels: ["channels"],
+    Recordings: ["recordings"],
+    Schedule: ["schedule"],
+    Series: ["seriestimers"],
   };
   const MODERN_SORTBY = {
     Name: ["SortName"],
@@ -2904,46 +3315,112 @@
     ReleaseDate: ["ProductionYear", "PremiereDate", "SortName"],
     Runtime: ["Runtime", "SortName"],
   };
-  function isModernLibraryPage() {
-    return jfcompat.isReactLibraryPage();
+  // 10.10.7 experimental sort values (apps/experimental/components/library/SortButton.tsx:26-109).
+  const EXPERIMENTAL_SORTBY = {
+    Name: "SortName",
+    Random: "Random",
+    CommunityRating: "CommunityRating",
+    CriticsRating: "CriticRating",
+    DateAdded: "DateCreated",
+    DateEpisodeAdded: "DateLastContentAdded",
+    DatePlayed: "DatePlayed",
+    ParentalRating: "OfficialRating",
+    PlayCount: "PlayCount",
+    ReleaseDate: "PremiereDate",
+    Runtime: "Runtime",
+  };
+  // 10.10.7 experimental library page (K-A4). False on 10.10.7 classic (isMui) and on 12.x.
+  function isExperimentalLibraryPage() {
+    return !jfcompat.isNewModel() && jfcompat.isRoute.apply(null, EXPERIMENTAL_LIBRARY_ROUTES) && jfcompat.isMui();
   }
-  function getModernLibraryState() {
-    if (!isModernLibraryPage()) return null;
-    const route = jfcompat.getRoute();
-    const views = MODERN_TAB_VIEWS[route.name];
-    const libraryId = route.params.get("topParentId");
-    if (!views || !libraryId) return null;
-    const tab = parseInt(route.params.get("tab") || "0", 10) || 0;
-    const viewType = views[tab];
-    if (!viewType) return null;
-    const key = `${viewType} - ${libraryId}`;
-    let settings = null;
+  function isModernLibraryPage() {
+    return jfcompat.isReactLibraryPage() || isExperimentalLibraryPage();
+  }
+  function reactTabViews(routeName) {
+    return (jfcompat.isNewModel() ? MODERN_TAB_VIEWS : EXPERIMENTAL_TAB_VIEWS)[routeName] || null;
+  }
+  // Tab shown when the URL has no ?tab (K-A7): the per-library landing setting
+  // userSettings.get("landing-" + key, false) = localStorage["<userId>-landing-<key>"]
+  // (scripts/settings/appSettings.js #getKey/get), else the default tab 0
+  // (12.x apps/modern/features/libraries/utils/path.ts:47-56; 10.10.7
+  // apps/experimental/components/tabs/tabRoutes.ts:26-35).
+  function landingTabIndex(views, settingsKey) {
+    let landing = null;
     try {
-      settings = JSON.parse(localStorage.getItem(key) || "null");
-    } catch {
-      settings = null;
+      const userId = getUserId();
+      landing = localStorage.getItem((userId ? userId + "-" : "") + "landing-" + settingsKey);
+    } catch (e) {
+      landing = null;
     }
-    if (!settings) {
-      // getDefaultLibraryViewSettings (utils/settings.ts)
-      settings = {
+    const index = landing ? views.indexOf(landing) : -1;
+    return index >= 0 ? index : 0;
+  }
+  // getDefaultLibraryViewSettings: 12.x utils/settings.ts:73-84, 10.10.7 utils/items.ts:157-168.
+  function defaultReactLibrarySettings(viewType, experimental) {
+    if (experimental) {
+      return {
         ShowTitle: true,
-        ShowYear: true,
-        ViewMode: "grid",
-        ImageType: viewType === "studios" ? "Thumb" : "Primary",
+        ShowYear: false,
+        ViewMode: viewType === "songs" ? "list" : "grid",
+        ImageType: viewType === "networks" ? "Thumb" : "Primary",
         CardLayout: false,
-        SortBy: [viewType === "episodes" ? "SeriesSortName" : "SortName"],
+        SortBy: viewType === "episodes" ? "SeriesSortName" : "SortName",
         SortOrder: "Ascending",
         StartIndex: 0,
       };
     }
-    return { route: route.name, libraryId, viewType, key, settings };
+    return {
+      ShowTitle: true,
+      ShowYear: true,
+      ViewMode: viewType === "songs" ? "list" : "grid",
+      ImageType: viewType === "studios" ? "Thumb" : "Primary",
+      CardLayout: false,
+      SortBy: [viewType === "episodes" ? "SeriesSortName" : "SortName"],
+      SortOrder: "Ascending",
+      StartIndex: 0,
+    };
   }
-  function updateModernLibrarySettings(mutate) {
+  function getModernLibraryState() {
+    if (!isModernLibraryPage()) return null;
+    const route = jfcompat.getRoute();
+    const views = reactTabViews(route.name);
+    const libraryId = route.params.get("topParentId");
+    const settingsKey = route.name === "livetv" ? "livetv" : libraryId;
+    if (!views || !settingsKey) return null;
+    const tabParam = route.params.get("tab");
+    const tab = tabParam !== null ? parseInt(tabParam, 10) || 0 : landingTabIndex(views, settingsKey);
+    const viewType = views[tab];
+    if (!viewType) return null;
+    const experimental = !jfcompat.isNewModel();
+    const key = `${viewType} - ${settingsKey}`;
+    let settings = null;
+    try {
+      settings = JSON.parse(localStorage.getItem(key) || "null");
+    } catch (e) {
+      settings = null;
+    }
+    if (!settings) settings = defaultReactLibrarySettings(viewType, experimental);
+    return { route: route.name, views, tab, libraryId, settingsKey, viewType, key, settings, experimental };
+  }
+  // 10.10.7 experimental: remount the view so it reads the new settings (K-A4).
+  async function remountExperimentalTab(state) {
+    const other = state.tab === 0 ? 1 : 0;
+    if (!state.views[other]) return;
+    modernSwitchTab(other, true);
+    await waitForDomSettle(150, 1500);
+    modernSwitchTab(state.tab, true);
+    await waitForDomSettle(150, 1500);
+  }
+  async function updateModernLibrarySettings(mutate) {
     const state = getModernLibraryState();
     if (!state) return false;
     const next = mutate({ ...state.settings }, state);
     if (!next) return false;
     localStorage.setItem(state.key, JSON.stringify(next));
+    if (state.experimental) {
+      await remountExperimentalTab(state);
+      return true;
+    }
     window.dispatchEvent(new StorageEvent("local-storage", { key: state.key }));
     return true;
   }
@@ -2952,7 +3429,16 @@
     const sortOrder = values.map((v) => RADIO_SORTORDER_VALUE[v]).find(Boolean);
     if (!sortBy && !sortOrder) return false;
     return updateModernLibrarySettings((s, state) => {
-      if (sortBy) {
+      if (state.experimental) {
+        // 10.10.7 experimental: one ItemSortBy string, the names its sort menu uses.
+        let by = values.map((v) => EXPERIMENTAL_SORTBY[v]).find(Boolean);
+        if (by) {
+          if (state.viewType === "series" && by === "DatePlayed") by = "SeriesDatePlayed";
+          if (state.viewType === "episodes" && by === "SortName") by = "SeriesSortName";
+          if (state.viewType === "albums" && by === "PremiereDate") by = "ProductionYear";
+          s.SortBy = by;
+        }
+      } else if (sortBy) {
         // The same names the 12.x sort menu uses for these views (SortButton.tsx).
         if (state.viewType === "series" && sortBy[0] === "DatePlayed") sortBy = ["SeriesDatePlayed", "SortName"];
         if (state.viewType === "episodes" && sortBy[0] === "SortName") sortBy = ["SeriesSortName"];
@@ -2989,16 +3475,17 @@
     let known = null;
     if (["Genres", "Tags", "OfficialRatings"].some((c) => chain[c]) && window.ApiClient) {
       try {
-        known = await window.ApiClient.getJSON(
-          window.ApiClient.getUrl("Items/Filters", { UserId: getUserId(), ParentId: state.libraryId })
-        );
-      } catch {
+        const filterQuery = { UserId: getUserId() };
+        // Live TV has no library id ("livetv" is only the settings key).
+        if (state.libraryId) filterQuery.ParentId = state.libraryId;
+        known = await window.ApiClient.getJSON(window.ApiClient.getUrl("Items/Filters", filterQuery));
+      } catch (e) {
         known = null;
       }
     }
     const exact = (list, raw) =>
       (list || []).find((x) => String(x).toLowerCase() === raw.toLowerCase().trim()) || titleCase(raw.trim());
-    return updateModernLibrarySettings((s) => {
+    return await updateModernLibrarySettings((s) => {
       const f = { ...(s.Filters || {}) };
       const toggle = (field, value) => {
         if (value === null || value === undefined) return;
@@ -3035,19 +3522,65 @@
       return s;
     });
   }
-  // Tab index on a 12.x library page; null = no such tab there.
-  function modernTabIndex(libraryType, tabText) {
-    const map = MODERN_TAB_INDEX[libraryType];
-    return map && map[tabText] !== undefined ? map[tabText] : null;
+  // Tab index of a legacy tab text on the current React library page; null = no such tab.
+  function modernTabIndex(tabText) {
+    const views = reactTabViews(jfcompat.getRoute().name);
+    if (!views) return null;
+    for (const view of TAB_TEXT_VIEWS[tabText] || []) {
+      const index = views.indexOf(view);
+      if (index >= 0) return index;
+    }
+    return null;
   }
-  function modernSwitchTab(index) {
+  // replace = true right after K's own jump to the library, so the jump and the
+  // tab do not leave two history entries (K-A8). A tab change on a page that was
+  // already open adds one entry, like Jellyfin's own tab click (setSearchParams).
+  function modernSwitchTab(index, replace) {
     const route = jfcompat.getRoute();
     route.params.set("tab", String(index));
-    window.location.hash = `#/${route.name}?${route.params.toString()}`;
+    const url = `${jfcompat.routeUrl(route.name)}?${route.params.toString()}`;
+    if (replace) window.location.replace(url);
+    else window.location.hash = url;
     return true;
   }
+  // Bare genre name on a Genres tab: React view name, else the legacy tab bar (K-A2/K-A4/K-A6).
+  function isGenresTabActive() {
+    if (isModernLibraryPage()) {
+      const state = getModernLibraryState();
+      return !!state && state.viewType === "genres";
+    }
+    return legacyTabIs(jfcompat.getRoute().name, "Genres");
+  }
+  // Play all / Shuffle buttons of a React library page (K-A6, K-A4). 12.x: MUI
+  // buttons in the library toolbar inside the app bar, only a translated title,
+  // found by icon test id (PlayAllButton.tsx:69-80, ShuffleButton.tsx:60-71,
+  // AppLayout.tsx:51). 10.10.7 experimental: MUI IconButtons with the legacy
+  // classes btnPlay / btnShuffle (PlayAllButton.tsx:50-56, ShuffleButton.tsx:41-47).
+  function findReactListActionButton(action) {
+    if (!isModernLibraryPage()) return null;
+    const candidates = [];
+    if (jfcompat.isNewModel()) {
+      const icon = action === "shuffle" ? "ShuffleIcon" : action === "play" ? "PlayArrowIcon" : null;
+      if (!icon) return null;
+      document.querySelectorAll(`.MuiAppBar-root svg[data-testid="${icon}"]`).forEach((svg) => {
+        const b = svg.closest("button");
+        if (b) candidates.push(b);
+      });
+    } else {
+      const cls = action === "shuffle" ? ".btnShuffle" : action === "play" ? ".btnPlay" : null;
+      if (!cls) return null;
+      document.querySelectorAll(`.libraryPage ${cls}.MuiIconButton-root`).forEach((b) => candidates.push(b));
+    }
+    return candidates.find((b) => b.offsetParent !== null && !b.disabled) || null;
+  }
+  // The element that really scrolls (K-C8): the document on every page except
+  // the Live TV guide, whose program list scrolls in its own .guideVerticalScroller
+  // (components/guide/tvguide.template.html:20, both versions). The old
+  // ".main-content" exists in neither version.
   function getScrollContainer() {
-    return document.querySelector(".main-content") || document.documentElement;
+    const guide = document.querySelector(".guideVerticalScroller");
+    if (guide && guide.getClientRects().length > 0 && guide.scrollHeight > guide.clientHeight) return guide;
+    return document.documentElement;
   }
   function isPageScrollable() {
     const el = getScrollContainer();
@@ -3118,20 +3651,24 @@
   function autoScrollSleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
-  async function runAutoScrollLoop() {
-    while (autoScrollActive) {
+  // Each started loop has its own number (K-A12): a loop that sleeps through
+  // "stop" + "scroll" finds a newer number and ends, so only one loop runs.
+  let autoScrollGen = 0;
+  async function runAutoScrollLoop(gen) {
+    const alive = () => autoScrollActive && gen === autoScrollGen;
+    while (alive()) {
       const el = getScrollContainer();
       if (el.scrollTop === 0 && autoScrollTopPending) {
         autoScrollTopPending = false;
         if (autoScrollDelaySeconds > 0) {
           await autoScrollSleep(autoScrollDelaySeconds * 1000);
-          if (!autoScrollActive) break;
+          if (!alive()) break;
         }
       }
       el.scrollTop += AUTO_SCROLL_SPEEDS[autoScrollSpeedIndex] * 16;
       if (el.scrollTop + el.clientHeight >= el.scrollHeight) {
         await autoScrollSleep(3000);
-        if (!autoScrollActive) break;
+        if (!alive()) break;
         el.scrollTop = 0;
         autoScrollTopPending = true;
       }
@@ -3143,12 +3680,13 @@
     if (!autoScrollActive) {
       autoScrollActive = true;
       autoScrollTopPending = true;
-      runAutoScrollLoop();
+      runAutoScrollLoop(++autoScrollGen);
     }
     return true;
   }
   function stopAutoScroll() {
     autoScrollActive = false;
+    autoScrollGen++;
     return true;
   }
   function waitForDomSettle(quietMs = 200, maxWaitMs = 2000) {
@@ -3196,12 +3734,59 @@
     play: [".itemsViewSettingsContainer .btnPlay:not(.hide)", ".itemsViewSettingsContainer button.btnPlay"],
     shuffle: [".itemsViewSettingsContainer .btnShuffle:not(.hide)", ".itemsViewSettingsContainer button.btnShuffle"],
   };
-  const MORE_MENU_BUTTON_SELECTORS = [
-    '[title="More"]',
-    ".btnMoreCommands",
-    'button[data-action="menu"]',
-  ];
-  function findActionSheetItem(match, text) {
+  // Library-page Play all / Shuffle outside the list page (K-C6): legacy movies tab
+  // (controllers/movies/movies.html:6 in 10.10.7 - btnShuffle; 12.1 apps/legacy/
+  // controllers/movies/movies.html:6-7 - btnPlayAll, btnShuffle) and music.html:14-15.
+  const LIBRARY_TAB_ACTION_SELECTORS = {
+    play: [".pageTabContent .btnPlayAll:not(.hide)", ".btnPlayAll.musicglobalButton"],
+    shuffle: [".pageTabContent .btnShuffle:not(.hide)", ".btnShuffle.musicglobalButton"],
+  };
+  // Play all / Shuffle of a list or library page, never a card's hover button.
+  // withLibraryTabs = also the library tab buttons (chained "<library> play all").
+  function clickListActionWhenReady(action, token, timeoutMs, withLibraryTabs, intervalMs = 150) {
+    const selectors = [...(LIST_VIEW_ACTION_SELECTORS[action] || [])];
+    if (withLibraryTabs) selectors.push(...(LIBRARY_TAB_ACTION_SELECTORS[action] || []));
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const tryClick = () => {
+        if (token !== commandToken) {
+          resolve(false);
+          return;
+        }
+        for (const sel of selectors) {
+          const el = [...document.querySelectorAll(sel)].find((c) => c.offsetParent !== null);
+          if (el) {
+            el.click();
+            resolve(true);
+            return;
+          }
+        }
+        // React library pages (K-A6 12.x modern, K-A4 10.10.7 experimental).
+        const reactBtn = findReactListActionButton(action);
+        if (reactBtn) {
+          reactBtn.click();
+          resolve(true);
+          return;
+        }
+        if (Date.now() - start > timeoutMs) {
+          resolve(false);
+          return;
+        }
+        setTimeout(tryClick, intervalMs);
+      };
+      tryClick();
+    });
+  }
+  // (MORE_MENU_BUTTON_SELECTORS was removed: menu commands use only the visible
+  // details page's .btnMoreCommands, see clickDetailsMoreButtonWhenReady, K-C2.)
+  function findActionSheetItem(match, text, ids) {
+    // By data-id first (K-A2): actionSheet.ts renders data-id="<command id>" on every
+    // item, in menu order; the English text is the fallback.
+    if (ids && ids.length) {
+      for (const el of document.querySelectorAll(".actionSheetMenuItem[data-id]")) {
+        if (ids.includes(el.getAttribute("data-id"))) return el;
+      }
+    }
     const candidates = document.querySelectorAll(
       ".actionSheetScroller button, .actionsheetContent button, li.listItem button"
     );
@@ -3235,7 +3820,7 @@
     if (token !== commandToken) return false;
     for (const v of values) {
       if (v === "ShowTitle") {
-        const checkbox = document.querySelector(".chkShowTitle");
+        const checkbox = queryInOpenDialog(".chkShowTitle");
         if (checkbox) {
           checkbox.click();
           await waitForDomSettle(100, 400);
@@ -3245,7 +3830,7 @@
       }
       const optionValue = SELECT_OPTION_VALUE[v];
       if (!optionValue) continue;
-      const select = document.querySelector(".selectImageType");
+      const select = queryInOpenDialog(".selectImageType");
       if (select) {
         select.value = optionValue;
         select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3253,7 +3838,7 @@
         if (token !== commandToken) return false;
       }
     }
-    const cancelBtn = document.querySelector(".btnCancel");
+    const cancelBtn = queryInOpenDialog(".btnCancel");
     if (cancelBtn) cancelBtn.click();
     return true;
   }
@@ -3262,7 +3847,7 @@
     const currentType = await detectCurrentLibraryType();
     if ((currentType === "movies" || currentType === "tvshows") && isOnDedicatedLibraryPage()) {
       const dataIdMap =
-        currentType === "movies" && getCurrentActiveTabText() === "Collections"
+        currentType === "movies" && legacyTabIs("movies", "Collections")
           ? RADIO_SORTBY_DATA_ID_MOVIES_SETS
           : currentType === "movies"
             ? RADIO_SORTBY_DATA_ID_MOVIES
@@ -3290,7 +3875,7 @@
           if (token !== commandToken) return false;
         }
       }
-      if (isSortDialogOpen()) {
+      if (isSortDialogOpen() && historyHasDialog()) {
         window.history.back();
         await waitWhile(isSortDialogOpen, 400);
       }
@@ -3305,7 +3890,7 @@
     await waitForDomSettle(150, 800);
     if (token !== commandToken) return false;
     if (selectSortByValue) {
-      const select = document.querySelector(".selectSortBy");
+      const select = queryInOpenDialog(".selectSortBy");
       if (select) {
         select.value = selectSortByValue;
         select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3314,7 +3899,7 @@
       }
     }
     if (selectSortOrderValue) {
-      const select = document.querySelector(".selectSortOrder");
+      const select = queryInOpenDialog(".selectSortOrder");
       if (select) {
         select.value = selectSortOrderValue;
         select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3322,16 +3907,50 @@
         if (token !== commandToken) return false;
       }
     }
-    const cancelBtn2 = document.querySelector(".btnCancel");
+    const cancelBtn2 = queryInOpenDialog(".btnCancel");
     if (cancelBtn2) cancelBtn2.click();
     return true;
   }
-  async function triggerSubmenuAction(match, text, token) {
-    const opened = await clickSelectorsWhenReady(MORE_MENU_BUTTON_SELECTORS, token, 1500);
+  // The More button of the VISIBLE details page of this item (K-C2). Card hover
+  // menus (cardBuilder.js data-action="menu", title "More") and cached hidden
+  // details pages are never used, so a menu command cannot hit another item.
+  function clickDetailsMoreButtonWhenReady(itemId, token, timeoutMs = 1500, intervalMs = 150) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const tryClick = () => {
+        if (token !== commandToken) {
+          resolve(false);
+          return;
+        }
+        if (window.location.hash.includes(itemId)) {
+          for (const idEl of document.querySelectorAll(`.mainDetailButtons [data-id="${itemId}"]`)) {
+            const container = idEl.closest(".mainDetailButtons");
+            const btn = container ? container.querySelector(".btnMoreCommands") : null;
+            if (btn && btn.offsetParent !== null) {
+              btn.click();
+              resolve(true);
+              return;
+            }
+          }
+        }
+        if (Date.now() - start > timeoutMs) {
+          resolve(false);
+          return;
+        }
+        setTimeout(tryClick, intervalMs);
+      };
+      tryClick();
+    });
+  }
+  async function triggerSubmenuAction(match, text, token, ids) {
+    // Menu commands (edit, identify, delete ...) only on a details page (K-C2).
+    const itemId = getCurrentDetailsItemId();
+    if (!itemId) return false;
+    const opened = await clickDetailsMoreButtonWhenReady(itemId, token, 1500);
     if (!opened) return false;
     await waitForDomSettle(150, 800);
     if (token !== commandToken) return false;
-    const item = findActionSheetItem(match, text);
+    const item = findActionSheetItem(match, text, ids);
     if (!item) {
       console.warn(`[SilentSearch] Menu item "${text}" not found`);
       return false;
@@ -3369,33 +3988,24 @@
       tryClick();
     });
   }
-  function clickTextWhenReady(label, token, timeoutMs = 5000, intervalMs = 150) {
-    return new Promise((resolve) => {
-      const start = Date.now();
-      const tryClick = () => {
-        if (token !== commandToken) {
-          resolve(false);
-          return;
-        }
-        const candidates = document.querySelectorAll(".emby-button-foreground");
-        for (const el of candidates) {
-          if (el.textContent.trim().toLowerCase() === label.toLowerCase()) {
-            const btn = el.closest("button") || el.closest("a") || el;
-            btn.click();
-            resolve(true);
-            return;
-          }
-        }
-        if (Date.now() - start > timeoutMs) {
-          resolve(false);
-          return;
-        }
-        setTimeout(tryClick, intervalMs);
-      };
-      tryClick();
-    });
+  // Favourites sections by the item type in their "more" link, not by the
+  // translated title (K-A2): favorites.js createSections/getRouteUrl link to
+  // list?...&type=<Type>&IsFavorite=true (appRouter.js getRouteUrl 'list').
+  // The TV layout has no link there, so it keeps the English title match.
+  const FAVORITES_SECTION_TYPES = { Movies: "Movie", Shows: "Series", Episodes: "Episode", People: "Person", Collections: "BoxSet", Videos: "Video" };
+  function findFavoritesSectionHeading(label) {
+    const type = FAVORITES_SECTION_TYPES[label];
+    if (!type) return null;
+    const re = new RegExp(`[?&]type=${type}&IsFavorite=true(&|$)`);
+    for (const a of document.querySelectorAll(".sectionTitleContainer a.sectionTitleTextButton")) {
+      if (a.offsetParent === null) continue;
+      if (re.test(a.getAttribute("href") || "")) return a.querySelector(".sectionTitle") || a;
+    }
+    return null;
   }
   function findSectionHeading(label) {
+    const byType = findFavoritesSectionHeading(label);
+    if (byType) return byType;
     const headings = document.querySelectorAll(".sectionTitle");
     for (const h of headings) {
       if (h.offsetParent === null) continue;
@@ -3468,11 +4078,38 @@
     if (byPosition) return (byPosition.StartPositionTicks || 0) / 10000000;
     return null;
   }
+  // Seek listeners (K-A15): applied at loadedmetadata/canplay and 150 ms after the
+  // first "playing", as before; then every listener still armed is removed, so a
+  // later pause/resume or buffering stall no longer jumps back. Listeners that
+  // never fire are dropped after SEEK_LISTEN_MAX_MS.
+  const SEEK_LISTEN_MAX_MS = 60000;
+  function armVideoSeek(video, applySeek, readyNow) {
+    const armed = [];
+    let giveUp = null;
+    const cleanup = () => {
+      armed.forEach((a) => video.removeEventListener(a[0], a[1]));
+      armed.length = 0;
+      if (giveUp) clearTimeout(giveUp);
+      giveUp = null;
+    };
+    const on = (name, fn) => {
+      video.addEventListener(name, fn, { once: true });
+      armed.push([name, fn]);
+    };
+    if (readyNow) applySeek();
+    else on("loadedmetadata", applySeek);
+    on("canplay", applySeek);
+    on("playing", () => {
+      cleanup();
+      setTimeout(applySeek, 150);
+    });
+    giveUp = setTimeout(cleanup, SEEK_LISTEN_MAX_MS);
+  }
   function seekVideoTo(seekSeconds, timeoutMs = 5000) {
     return new Promise((resolve) => {
       const deadline = Date.now() + timeoutMs;
       const tryFind = () => {
-        const video = document.querySelector("video");
+        const video = findPlaybackVideo(); // main player only, not a theme video (K-A5)
         if (video) {
           const applySeek = () => {
             try {
@@ -3480,10 +4117,7 @@
             } catch (err) {
             }
           };
-          if (video.readyState >= 1) applySeek();
-          else video.addEventListener("loadedmetadata", applySeek, { once: true });
-          video.addEventListener("canplay", applySeek, { once: true });
-          video.addEventListener("playing", () => setTimeout(applySeek, 150), { once: true });
+          armVideoSeek(video, applySeek, video.readyState >= 1);
           resolve(true);
           return;
         }
@@ -3500,7 +4134,7 @@
     return new Promise((resolve) => {
       const deadline = Date.now() + timeoutMs;
       const tryFind = () => {
-        const video = document.querySelector("video");
+        const video = findPlaybackVideo(); // main player only, not a theme video (K-A5)
         if (video) {
           const applySeek = () => {
             if (!video.duration || Number.isNaN(video.duration)) return;
@@ -3509,13 +4143,7 @@
             } catch (err) {
             }
           };
-          if (video.readyState >= 1 && video.duration) {
-            applySeek();
-          } else {
-            video.addEventListener("loadedmetadata", applySeek, { once: true });
-          }
-          video.addEventListener("canplay", applySeek, { once: true });
-          video.addEventListener("playing", () => setTimeout(applySeek, 150), { once: true });
+          armVideoSeek(video, applySeek, !!(video.readyState >= 1 && video.duration));
           resolve(true);
           return;
         }
@@ -3551,11 +4179,18 @@
     if (isReplay) return await playViaUiReplayOnly(item, token);
     return await playViaUi(item, token);
   }
-  async function playItemsLegacy(items) {
+  // Local trailer when the trailer button is hidden (K-A14). Neither version puts
+  // playbackManager on window (only ApiClient and Emby: ServerConnections.js
+  // 10.10.7:88, 12.1 lib/jellyfin-apiclient/ServerConnections.js:95), so the
+  // trailer is opened as an item and its own Play button is clicked.
+  async function playItemsLegacy(items, token) {
     if (!items || items.length === 0) return false;
-    if (!window.playbackManager) return false;
-    window.playbackManager.play({ items });
-    return true;
+    if (window.playbackManager && typeof window.playbackManager.play === "function") {
+      window.playbackManager.play({ items });
+      return true;
+    }
+    if (!items[0] || !items[0].Id) return false;
+    return await playViaUi(items[0], token);
   }
   async function playTrailer(item, token) {
     navigateToItem(item);
@@ -3564,7 +4199,7 @@
     try {
       const trailers = await window.ApiClient.getLocalTrailers(getUserId(), item.Id);
       if (trailers && trailers.length > 0) {
-        return playItemsLegacy([trailers[0]]);
+        return await playItemsLegacy([trailers[0]], token);
       }
     } catch (err) {}
     if (item.RemoteTrailers && item.RemoteTrailers.length > 0) {
@@ -3581,7 +4216,7 @@
     try {
       const trailers = await window.ApiClient.getLocalTrailers(getUserId(), itemId);
       if (trailers && trailers.length > 0) {
-        return playItemsLegacy([trailers[0]]);
+        return await playItemsLegacy([trailers[0]], token);
       }
     } catch (err) {}
     try {
@@ -3608,7 +4243,8 @@
         }
         const listSelectors = LIST_VIEW_ACTION_SELECTORS[cmd.action];
         if (!listSelectors) return false;
-        return await clickSelectorsWhenReady(listSelectors, token, 1500);
+        // List page as before; plus the React library toolbar (K-A6/K-A4).
+        return await clickListActionWhenReady(cmd.action, token, 1500, false);
       }
       case "contextJump": {
         const item = await resolveContextItem(cmd);
@@ -3647,7 +4283,7 @@
         if (cmd.actionKind === "submenuAction") {
           await waitForDomSettle();
           if (token !== commandToken) return false;
-          return await triggerSubmenuAction(cmd.actionData.match, cmd.actionData.text, token);
+          return await triggerSubmenuAction(cmd.actionData.match, cmd.actionData.text, token, cmd.actionData.ids);
         }
         return false;
       }
@@ -3714,15 +4350,24 @@
           const success = await runCommand(cmd.innerCmd, token);
           if (!success) return false;
         }
-        const card = document.querySelector(".nextUpItems .card");
+        // Only the visible details page's Next Up row (K-A3): viewContainer.js keeps
+        // up to 3 pages in the DOM and only hides the old ones, each with its own
+        // .nextUpItems (itemDetails/index.html 10.10.7:160, 12.1:140).
+        const card = await waitForVisibleElement(".nextUpItems .card", token, 3000);
         if (!card) return false;
-        if (cmd.shouldPlay) {
-          const resumeBtn = card.querySelector('button[data-action="resume"]');
-          if (!resumeBtn) return false;
-          resumeBtn.click();
-          return true;
-        }
         const itemId = card.getAttribute("data-id");
+        if (cmd.shouldPlay) {
+          // Desktop: the card's hover play button, as before. Mobile cards carry
+          // data-action="play", TV cards no button (cardBuilder.js 10.10.7:984,1151,
+          // 12.1:842,1005): there the episode's own details page plays it (K-A9).
+          const resumeBtn = card.querySelector('button[data-action="resume"]');
+          if (resumeBtn) {
+            resumeBtn.click();
+            return true;
+          }
+          if (!itemId) return false;
+          return await playViaUi({ Id: itemId }, token);
+        }
         if (!itemId) return false;
         navigateToItem({ Id: itemId });
         await waitForDomSettle();
@@ -3735,17 +4380,28 @@
           if (!success) return false;
         }
         if (cmd.kind === "submenuAction") {
-          return await triggerSubmenuAction(cmd.data.match, cmd.data.text, token);
+          return await triggerSubmenuAction(cmd.data.match, cmd.data.text, token, cmd.data.ids);
         }
         if (cmd.kind === "trailerAction") {
           return await playTrailerByCurrentPage(token);
         }
-        const selectors = DETAILS_ACTION_SELECTORS[cmd.data] || PLAY_BUTTON_SELECTORS;
-        return await clickSelectorsWhenReady(selectors, token, 2000);
+        // K-C6: on a details page only its own .mainDetailButtons; on a library or
+        // list page only the Play all / Shuffle buttons - never a card's hover
+        // button (cardBuilder.js data-action="resume"), which played the first card.
+        const detailsItemId = getCurrentDetailsItemId();
+        if (detailsItemId) {
+          const selectors = DETAILS_ACTION_SELECTORS[cmd.data] || PLAY_BUTTON_SELECTORS;
+          return await clickWhenReadyForItem(detailsItemId, selectors, token, 2000);
+        }
+        const listAction = cmd.data === "shuffle" ? "shuffle" : cmd.data === "play" ? "play" : null;
+        if (!listAction) return false;
+        return await clickListActionWhenReady(listAction, token, 2000, true);
       }
       case "bareLetterWithAlphaFallback": {
-        const btn = document.querySelector(alphaPickerSelector(cmd.letter));
-        if (btn && btn.offsetParent !== null) {
+        // The visible picker, not the first in the DOM (K-C3): hidden Trailers-tab
+        // picker (movies.html:14/58) or a cached page's picker.
+        const btn = [...document.querySelectorAll(alphaPickerSelector(cmd.letter))].find((b) => b.offsetParent !== null);
+        if (btn) {
           btn.click();
           return true;
         }
@@ -3804,23 +4460,29 @@
         return true;
       }
       case "libraryTab": {
+        let staleTabs = null;
         if (!cmd.alreadyInLibrary) {
           const library = await resolveLibrary(cmd.libraryType);
           if (!library) return false;
           const hash = buildLibraryHash(library, cmd.libraryType);
+          staleTabs = staleTabsBefore(LIBRARY_TYPE_ROUTE[cmd.libraryType]);
           window.location.hash = hash;
           await waitForDomSettle();
           if (token !== commandToken) return false;
         }
         if (!cmd.tabAlreadyActive) {
           if (isModernLibraryPage()) {
-            const index = modernTabIndex(cmd.libraryType, cmd.tabText);
+            // Index from the current React page's views: also Live TV and the
+            // 10.10.7 experimental pages (K-A6, K-A4).
+            const index = modernTabIndex(cmd.tabText);
             if (index === null) return false;
-            modernSwitchTab(index);
+            // replace after K's own jump, one entry when already there (K-A8).
+            modernSwitchTab(index, !cmd.alreadyInLibrary);
             await waitForDomSettle();
             if (token !== commandToken) return false;
           } else {
-            const clickedTab = await clickTextWhenReady(cmd.tabText, token);
+            // Tab by position, English text as fallback (K-A2).
+            const clickedTab = await clickTabWhenReady(LIBRARY_TYPE_ROUTE[cmd.libraryType], cmd.tabText, token, staleTabs);
             if (!clickedTab) return false;
           }
         }
@@ -3881,7 +4543,7 @@
         return true;
       }
       case "submenuAction": {
-        return await triggerSubmenuAction(cmd.match, cmd.text, token);
+        return await triggerSubmenuAction(cmd.match, cmd.text, token, cmd.ids);
       }
       case "resetFilters": {
         const library = await resolveLibrary(cmd.libraryType);
@@ -3940,7 +4602,7 @@
           }
           if (!outerItem) {
             const includeTypes = cmd.pickTypes.join(",");
-            const items = await fetchAllOfType(includeTypes);
+            const items = await fetchRandomOfType(includeTypes); // server pick (K-A16)
             if (items.length === 0) return false;
             outerItem = pickRandom(items);
           }
@@ -3951,19 +4613,22 @@
         return await executeRandomOutcome(outerItem, cmd, token);
       }
       case "nav": {
+        const staleTabs = staleTabsBefore("home");
         window.location.hash = jfcompat.routeUrl("home");
         await waitForDomSettle();
         if (token !== commandToken) return false;
+        // Home tabs by position (home.js getTabs: Home, Favorites), English text
+        // as fallback (K-A2). On MUI layouts they sit in the hidden classic header.
         if (cmd.target === "home") {
-          const clicked = await clickTextWhenReady("Home", token);
+          const clicked = await clickTabWhenReady("home", "Home", token, staleTabs);
           if (!clicked) return false;
-          await waitForActiveTab("Home");
+          await waitForActiveTab("home", "Home");
           return true;
         }
         if (cmd.target === "favourites") {
-          const clicked = await clickTextWhenReady("Favorites", token);
+          const clicked = await clickTabWhenReady("home", "Favorites", token, staleTabs);
           if (!clicked) return false;
-          await waitForActiveTab("Favorites");
+          await waitForActiveTab("home", "Favorites");
           if (!cmd.section) return true;
           await waitForDomSettle();
           if (token !== commandToken) return false;
@@ -4114,21 +4779,32 @@
         return false;
     }
   }
+  // Order of Enters (K-A11): parsing can wait for the server, so a later
+  // command may finish parsing first. It then runs, and the earlier one is
+  // dropped when its parse ends. A typo (parse fails) takes no token, so it
+  // never cancels a command that is already running.
+  let parseSeq = 0;
+  let lastStartedParse = 0;
   async function processBuffer() {
     const raw = buffer;
     resetBuffer();
     if (raw.trim().length < CONFIG.minLength) return;
+    const parseId = ++parseSeq;
     const cmd = await parseCommand(raw);
+    // The flash shows the command text again (K-A10).
+    const shown = raw.trim();
     if (!cmd) {
-      flashResult(false);
+      flashResult(false, shown);
       return;
     }
+    if (parseId < lastStartedParse) return;
+    lastStartedParse = parseId;
     const token = ++commandToken;
     try {
       const success = await runCommand(cmd, token);
-      if (token === commandToken) flashResult(success);
+      if (token === commandToken) flashResult(success, shown);
     } catch (err) {
-      if (token === commandToken) flashResult(false);
+      if (token === commandToken) flashResult(false, shown);
     }
   }
 })();
