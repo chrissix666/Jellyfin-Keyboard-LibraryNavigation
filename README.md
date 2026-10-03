@@ -21,7 +21,7 @@ Requires the [JavaScript Injector](https://github.com/n00bcodr/Jellyfin-JavaScri
 
 - Windows 11
 - Chrome
-- Jellyfin Web 10.10.7
+- Jellyfin Web 10.10.7 and 12.0+
 - Jellyfin JavaScript Injector
 
 ## License
