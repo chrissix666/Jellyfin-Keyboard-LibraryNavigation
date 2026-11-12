@@ -243,6 +243,17 @@
     indicatorOffsetY: "6vh",
     indicatorColor: "#00ff41", // indicator text color, any RGB hex code works
   };
+  // Settings from the Essentials plugin, merged over the defaults below; without it the defaults hold.
+  const essentials = (window.JellyfinEssentials && window.JellyfinEssentials.settings && window.JellyfinEssentials.settings.keyboardLibraryNavigation) || {};
+  function mergeSettings(target, source) {
+    Object.keys(source || {}).forEach(function (key) {
+      const value = source[key];
+      const nested = value && typeof value === "object" && !Array.isArray(value);
+      if (nested && target[key] && typeof target[key] === "object" && !Array.isArray(target[key])) mergeSettings(target[key], value);
+      else target[key] = value;
+    });
+  }
+  mergeSettings(CONFIG, essentials.CONFIG);
   const COLLECTION_KEYWORDS = [
     "collection", "filmreihe", "anthology", "saga", "set",
     "colecao",
