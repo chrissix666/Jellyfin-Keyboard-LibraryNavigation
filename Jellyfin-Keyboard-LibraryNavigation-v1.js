@@ -226,8 +226,8 @@
       return api;
   })();
   /* end jfcompat 1.1 */
-  // Loaded twice (Injector entry duplicated, old + test copy): the second copy
-  // stops here, so there is one buffer and one command per Enter (K-A17).
+  // One copy per page: a second copy stops here, so there is one buffer and one
+  // command per Enter.
   if (window.__jfKeyboardLibraryNav) return;
   window.__jfKeyboardLibraryNav = true;
   const CONFIG = {
@@ -243,7 +243,7 @@
     indicatorOffsetY: "6vh",
     indicatorColor: "#00ff41", // indicator text color, any RGB hex code works
   };
-  // Settings from the Essentials plugin, merged over the defaults below; without it the defaults hold.
+  // Settings from the Essentials plugin, merged over the defaults above; without it the defaults hold.
   const essentials = (window.JellyfinEssentials && window.JellyfinEssentials.settings && window.JellyfinEssentials.settings.keyboardLibraryNavigation) || {};
   function mergeSettings(target, source) {
     Object.keys(source || {}).forEach(function (key) {
@@ -360,7 +360,7 @@
   function flashResult(ok, text) {
     if (!CONFIG.showIndicator) return;
     ensureIndicator();
-    // Show the finished command in green/red (K-A10): processBuffer has already
+    // Show the finished command in green/red: processBuffer has already
     // cleared text and opacity, so set both again. Never cover a new command
     // that is being typed, and never hide one when the timer fires.
     if (flashTimer) clearTimeout(flashTimer);
@@ -375,13 +375,13 @@
     }, 700);
   }
   function isVideoPlaying() {
-    // Only real playback (K-A5): the video route, or the fullscreen player
+    // Only real playback: the video route, or the fullscreen player
     // container (htmlVideoPlayer/plugin.js 10.10.7:1645-1646). A theme video on a
     // details page (themeMediaPlayer.js, fullscreen:false) or another script's
     // <video> no longer switches the keyboard off.
     return jfcompat.isRoute("video") || !!document.querySelector(".videoPlayerContainer-onTop video");
   }
-  // The main player's <video> for chapter/percent seek (K-A5), never a theme video.
+  // The main player's <video> for chapter/percent seek, never a theme video.
   function findPlaybackVideo() {
     const onTop = document.querySelector(".videoPlayerContainer-onTop video");
     if (onTop) return onTop;
@@ -390,7 +390,7 @@
   }
   // Input types that take no typed text: Jellyfin's own rule
   // (scripts/keyboardNavigation.js 10.10.7:61, 12.1:101). After a click on a
-  // checkbox, radio or button input K keeps working (K-C7).
+  // checkbox, radio or button input K keeps working.
   const NON_TEXT_INPUT_TYPES = ["button", "checkbox", "color", "file", "hidden", "image", "radio", "reset", "submit"];
   function isTypingInRealField(target) {
     if (!target) return false;
@@ -415,7 +415,7 @@
     if (isVideoPlaying()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === "Enter") {
-      // Only swallow Enter for a typed command (K-A1). Otherwise the browser
+      // Only swallow Enter for a typed command. Otherwise the browser
       // activates the focused card/button/link (TV remote OK key); Jellyfin's own
       // key handler has no Enter case (scripts/keyboardNavigation.js).
       if (buffer.trim().length < CONFIG.minLength) {
@@ -423,14 +423,14 @@
         return;
       }
       e.preventDefault();
-      // A focused checkbox/radio (K-C7) has its own Enter handler (emby-checkbox,
+      // A focused checkbox/radio has its own Enter handler (emby-checkbox,
       // emby-radio); the Enter that runs a command must not toggle it too.
       if (document.activeElement && document.activeElement.tagName === "INPUT") e.stopPropagation();
       processBuffer();
       return;
     }
     if (e.key === "Escape") {
-      // Only take Escape when there is a buffer to clear (K-A1); with an empty
+      // Only take Escape when there is a buffer to clear; with an empty
       // buffer Jellyfin's "back" (TV layout) and dialog closing run as normal.
       if (buffer) {
         e.preventDefault();
@@ -444,7 +444,7 @@
       scheduleIdleReset();
       return;
     }
-    // Synthetic keydown events can come without a key (K-A18).
+    // Synthetic keydown events can come without a key.
     if (typeof e.key === "string" && e.key.length === 1) {
       if (e.key === " " && CONFIG.preventSpaceScroll === "smart" && buffer.length === 0) {
         return;
@@ -661,7 +661,7 @@
     }
     return null;
   }
-  // Language-free filter lookup (K-C1, K-A2). Jellyfin has two filter UIs with the
+  // Language-free filter lookup. Jellyfin has two filter UIs with the
   // same markup in 10.10.7 and 12.1: components/filterdialog/filterdialog.template.html
   // (library pages: movies.js, tvshows.js, episodes.js ...) and
   // components/filtermenu/filtermenu.template.html (list page). Their label texts
@@ -720,7 +720,7 @@
     const containers = document.querySelectorAll(".dialogContainer");
     return containers.length ? containers[containers.length - 1] : null;
   }
-  // Lookup inside the open dialog (K-A3 side remark): viewContainer.js keeps up to
+  // Lookup inside the open dialog: viewContainer.js keeps up to
   // 3 pages in the DOM, so a document-wide .btnCancel / .selectImageType could
   // belong to a cached page. Without an open dialog: the document, as before.
   function queryInOpenDialog(sel) {
@@ -769,7 +769,7 @@
     });
   }
   function findFilterSection(labels, category) {
-    // By class inside the open dialog first (K-C1/K-A2), then by the English title.
+    // By class inside the open dialog first, then by the English title.
     const dlg = getOpenDialog();
     if (dlg && CATEGORY_SECTION_CLASSES[category]) {
       for (const sel of CATEGORY_SECTION_CLASSES[category]) {
@@ -991,7 +991,7 @@
       tryClick();
     });
   }
-  // First visible element for a selector, polled (K-A3).
+  // First visible element for a selector, polled.
   function waitForVisibleElement(selector, token, timeoutMs = 3000, intervalMs = 150) {
     return new Promise((resolve) => {
       const start = Date.now();
@@ -1038,7 +1038,7 @@
     }
     return false;
   }
-  // Removes only what no open dialog owns any more (K-A13). ".dialog" is the
+  // Removes only what no open dialog owns any more. ".dialog" is the
   // dialog itself (dialogHelper.js 10.10.7:463, 12.1:466); cutting a live or
   // still-animating one (it keeps .opened until its exit animation ends) left
   // backdrop, body.noScroll and its history entry behind. The backdrop is a
@@ -1052,7 +1052,7 @@
     }
   }
   // True when the current history entry belongs to an open Jellyfin dialog, so
-  // history.back() closes that dialog and does not leave the page (K-A13).
+  // history.back() closes that dialog and does not leave the page.
   // The router history (RootAppRouter.tsx 10.10.7:22,36, 12.1:22,37) keeps the
   // dialogHelper state under history.state.usr (dialogHelper.js 10.10.7:177-187).
   function historyHasDialog() {
@@ -1120,7 +1120,7 @@
     if (!opened) return false;
     await waitForDomSettle(300, 1200);
     if (token !== commandToken) return false;
-    // Only inside the open filter dialog (K-C4): the sweep below used to uncheck
+    // Only inside the open filter dialog: the sweep below used to uncheck
     // every checked emby-checkbox in the document, cached settings pages included.
     const resetScope = getOpenDialog();
     const resetBtn = (resetScope || document).querySelector(".resetFilters");
@@ -1180,7 +1180,7 @@
         let success = false;
         let notFound = false;
         for (let attempt = 0; attempt < 2 && !success; attempt++) {
-          // Attribute lookup first, English label as fallback (K-C1).
+          // Attribute lookup first, English label as fallback.
           const found = await waitForFilterCheckbox(scope, category, raw, uiLabel, token);
           if (!found) {
             notFound = true;
@@ -1689,7 +1689,7 @@
     ),
   };
   // ids = the action sheet data-id of each item (components/itemContextMenu.js, same in
-  // 10.10.7 and 12.1); the English text is only the fallback (K-A2). Menu order is kept
+  // 10.10.7 and 12.1); the English text is only the fallback. Menu order is kept
   // for "download": Download All comes before Download, as the old startsWith match did.
   const SUBMENU_ITEM_PHRASES = {
     "add to collection": { match: "exact", text: "Add to collection", ids: ["addtocollection"] },
@@ -1897,7 +1897,7 @@
     const active = document.querySelector(".emby-tab-button-active .emby-button-foreground");
     return active ? active.textContent.trim() : null;
   }
-  // Legacy tab bars by position, not by translated text (K-A2). mainTabsManager
+  // Legacy tab bars by position, not by translated text. mainTabsManager
   // renders the page's getTabs() as .headerTabs .emby-tab-button[data-index=N]
   // (components/maintabsmanager.js:106-123, same in 12.1). Tab order per page:
   // movies controllers/movies/moviesrecommended.js getTabs (10.10.7:229-241,
@@ -1946,7 +1946,7 @@
     return getCurrentActiveTabText() === label;
   }
   // Click a tab by its position; the English text only after half the wait, so a
-  // stale bar of the previous page is not clicked by text (K-A2).
+  // stale bar of the previous page is not clicked by text.
   function clickTabWhenReady(routeName, label, token, staleTabs, timeoutMs = 5000, intervalMs = 150) {
     const order = legacyTabOrder(routeName);
     const index = order ? order.indexOf(label) : -1;
@@ -2604,10 +2604,10 @@
         await waitForDomSettle();
         if (token !== undefined && token !== commandToken) return true;
         if (isModernLibraryPage()) {
-          // replace: the jump above already made the history entry (K-A8).
+          // replace: the jump above already made the history entry.
           if (jfcompat.getRoute().params.get("tab") !== "0") modernSwitchTab(0, true);
         } else {
-          // First tab by position, English text as fallback (K-A2).
+          // First tab by position, English text as fallback.
           await clickTabWhenReady(LIBRARY_TYPE_ROUTE[mappedType], PRIMARY_TAB_TEXT[mappedType], token, staleTabs);
         }
       }
@@ -2663,7 +2663,7 @@
     }
     return Array.from(seen.values());
   }
-  // Exact-match fallback list (K-A16): pages of 2000 via StartIndex until the
+  // Exact-match fallback list: pages of 2000 via StartIndex until the
   // server's TotalRecordCount is reached (at most FETCH_ALL_MAX_PAGES pages), so
   // titles beyond the first 2000 are found. Libraries up to 2000 items: one
   // request, as before.
@@ -2693,7 +2693,7 @@
     }
     return all;
   }
-  // One item picked by the server (K-A16): random over the whole library instead
+  // One item picked by the server: random over the whole library instead
   // of over the first 2000 of a list.
   async function fetchRandomOfType(includeTypes) {
     if (!window.ApiClient) return [];
@@ -2918,7 +2918,7 @@
       return [];
     }
   }
-  // Persons fallback list (K-A16). 12.x pages via StartIndex
+  // Persons fallback list. 12.x pages via StartIndex
   // (PersonsController.cs 12.1:75); 10.10.7's /Persons has no startIndex
   // (PersonsController.cs 10.10.7:67-80), so there it stays one page of 2000.
   async function fetchAllPersons() {
@@ -3074,7 +3074,7 @@
     const params = new URLSearchParams(queryString);
     return params.get("parentId") || params.get("topParentId");
   }
-  // One random item of a type below a library (K-C5).
+  // One random item of a type below a library.
   async function fetchRandomInParent(includeTypes, parentId) {
     if (!window.ApiClient || !parentId) return [];
     try {
@@ -3116,7 +3116,7 @@
       const libType = await detectCurrentLibraryType();
       const libItemType = { movies: "Movie", tvshows: "Series", boxsets: "BoxSet" }[libType];
       if (libItemType) {
-        // Only THIS library (K-C5): ParentId + one random pick by the server, so a
+        // Only THIS library: ParentId + one random pick by the server, so a
         // second movie library and the 2000-item cap do not matter. Falls back to
         // the old all-libraries list only if that returns nothing.
         const inLibrary = await fetchRandomInParent(libItemType, getCurrentPageParentId());
@@ -3262,7 +3262,7 @@
   // libraries/hooks/useLibrary.tsx:50-53). Setting that object works in every
   // UI language. settingsKey = topParentId, or "livetv" on /livetv
   // (hooks/useCurrentTab.ts:9-10).
-  // 10.10.7 "experimental" (K-A4): movies/tv/music/livetv/homevideos are React
+  // 10.10.7 "experimental": movies/tv/music/livetv/homevideos are React
   // too (apps/experimental/routes/asyncRoutes/user.ts:8-14), same key
   // (utils/items.ts:145-147), but its own hook (hooks/useLocalStorage.tsx:3-20)
   // reads the key only when the view mounts and has no storage listener. The
@@ -3277,7 +3277,7 @@
     movies: ["movies", "suggestions", "favorites", "collections", "genres", "studios", "playlists"],
     tv: ["series", "suggestions", "upcoming", "genres", "studios", "episodes", "collections", "playlists"],
     boxsets: ["collections", "favorites", "genres"],
-    // K-A6: the other 12.x React library pages.
+    // The other 12.x React library pages.
     livetv: ["programs", "guide", "channels", "recordings", "schedule", "seriestimers"],
     music: ["albums", "suggestions", "albumartists", "artists", "playlists", "songs", "genres", "collections"],
     homevideos: ["folders", "photos", "photoalbums", "videos"],
@@ -3340,7 +3340,7 @@
     ReleaseDate: "PremiereDate",
     Runtime: "Runtime",
   };
-  // 10.10.7 experimental library page (K-A4). False on 10.10.7 classic (isMui) and on 12.x.
+  // 10.10.7 experimental library page. False on 10.10.7 classic (isMui) and on 12.x.
   function isExperimentalLibraryPage() {
     return !jfcompat.isNewModel() && jfcompat.isRoute.apply(null, EXPERIMENTAL_LIBRARY_ROUTES) && jfcompat.isMui();
   }
@@ -3350,7 +3350,7 @@
   function reactTabViews(routeName) {
     return (jfcompat.isNewModel() ? MODERN_TAB_VIEWS : EXPERIMENTAL_TAB_VIEWS)[routeName] || null;
   }
-  // Tab shown when the URL has no ?tab (K-A7): the per-library landing setting
+  // Tab shown when the URL has no ?tab: the per-library landing setting
   // userSettings.get("landing-" + key, false) = localStorage["<userId>-landing-<key>"]
   // (scripts/settings/appSettings.js #getKey/get), else the default tab 0
   // (12.x apps/modern/features/libraries/utils/path.ts:47-56; 10.10.7
@@ -3413,7 +3413,7 @@
     if (!settings) settings = defaultReactLibrarySettings(viewType, experimental);
     return { route: route.name, views, tab, libraryId, settingsKey, viewType, key, settings, experimental };
   }
-  // 10.10.7 experimental: remount the view so it reads the new settings (K-A4).
+  // 10.10.7 experimental: remount the view so it reads the new settings.
   async function remountExperimentalTab(state) {
     const other = state.tab === 0 ? 1 : 0;
     if (!state.views[other]) return;
@@ -3544,7 +3544,7 @@
     return null;
   }
   // replace = true right after K's own jump to the library, so the jump and the
-  // tab do not leave two history entries (K-A8). A tab change on a page that was
+  // tab do not leave two history entries. A tab change on a page that was
   // already open adds one entry, like Jellyfin's own tab click (setSearchParams).
   function modernSwitchTab(index, replace) {
     const route = jfcompat.getRoute();
@@ -3554,7 +3554,7 @@
     else window.location.hash = url;
     return true;
   }
-  // Bare genre name on a Genres tab: React view name, else the legacy tab bar (K-A2/K-A4/K-A6).
+  // Bare genre name on a Genres tab: React view name, else the legacy tab bar.
   function isGenresTabActive() {
     if (isModernLibraryPage()) {
       const state = getModernLibraryState();
@@ -3562,7 +3562,7 @@
     }
     return legacyTabIs(jfcompat.getRoute().name, "Genres");
   }
-  // Play all / Shuffle buttons of a React library page (K-A6, K-A4). 12.x: MUI
+  // Play all / Shuffle buttons of a React library page. 12.x: MUI
   // buttons in the library toolbar inside the app bar, only a translated title,
   // found by icon test id (PlayAllButton.tsx:69-80, ShuffleButton.tsx:60-71,
   // AppLayout.tsx:51). 10.10.7 experimental: MUI IconButtons with the legacy
@@ -3584,7 +3584,7 @@
     }
     return candidates.find((b) => b.offsetParent !== null && !b.disabled) || null;
   }
-  // The element that really scrolls (K-C8): the document on every page except
+  // The element that really scrolls: the document on every page except
   // the Live TV guide, whose program list scrolls in its own .guideVerticalScroller
   // (components/guide/tvguide.template.html:20, both versions). The old
   // ".main-content" exists in neither version.
@@ -3662,7 +3662,7 @@
   function autoScrollSleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
-  // Each started loop has its own number (K-A12): a loop that sleeps through
+  // Each started loop has its own number: a loop that sleeps through
   // "stop" + "scroll" finds a newer number and ends, so only one loop runs.
   let autoScrollGen = 0;
   async function runAutoScrollLoop(gen) {
@@ -3745,7 +3745,7 @@
     play: [".itemsViewSettingsContainer .btnPlay:not(.hide)", ".itemsViewSettingsContainer button.btnPlay"],
     shuffle: [".itemsViewSettingsContainer .btnShuffle:not(.hide)", ".itemsViewSettingsContainer button.btnShuffle"],
   };
-  // Library-page Play all / Shuffle outside the list page (K-C6): legacy movies tab
+  // Library-page Play all / Shuffle outside the list page: legacy movies tab
   // (controllers/movies/movies.html:6 in 10.10.7 - btnShuffle; 12.1 apps/legacy/
   // controllers/movies/movies.html:6-7 - btnPlayAll, btnShuffle) and music.html:14-15.
   const LIBRARY_TAB_ACTION_SELECTORS = {
@@ -3772,7 +3772,7 @@
             return;
           }
         }
-        // React library pages (K-A6 12.x modern, K-A4 10.10.7 experimental).
+        // React library pages (12.x modern, 10.10.7 experimental).
         const reactBtn = findReactListActionButton(action);
         if (reactBtn) {
           reactBtn.click();
@@ -3788,10 +3788,10 @@
       tryClick();
     });
   }
-  // (MORE_MENU_BUTTON_SELECTORS was removed: menu commands use only the visible
-  // details page's .btnMoreCommands, see clickDetailsMoreButtonWhenReady, K-C2.)
+  // Menu commands use only the visible details page's .btnMoreCommands, see
+  // clickDetailsMoreButtonWhenReady.
   function findActionSheetItem(match, text, ids) {
-    // By data-id first (K-A2): actionSheet.ts renders data-id="<command id>" on every
+    // By data-id first: actionSheet.ts renders data-id="<command id>" on every
     // item, in menu order; the English text is the fallback.
     if (ids && ids.length) {
       for (const el of document.querySelectorAll(".actionSheetMenuItem[data-id]")) {
@@ -3922,7 +3922,7 @@
     if (cancelBtn2) cancelBtn2.click();
     return true;
   }
-  // The More button of the VISIBLE details page of this item (K-C2). Card hover
+  // The More button of the VISIBLE details page of this item. Card hover
   // menus (cardBuilder.js data-action="menu", title "More") and cached hidden
   // details pages are never used, so a menu command cannot hit another item.
   function clickDetailsMoreButtonWhenReady(itemId, token, timeoutMs = 1500, intervalMs = 150) {
@@ -3954,7 +3954,7 @@
     });
   }
   async function triggerSubmenuAction(match, text, token, ids) {
-    // Menu commands (edit, identify, delete ...) only on a details page (K-C2).
+    // Menu commands (edit, identify, delete ...) only on a details page.
     const itemId = getCurrentDetailsItemId();
     if (!itemId) return false;
     const opened = await clickDetailsMoreButtonWhenReady(itemId, token, 1500);
@@ -4000,7 +4000,7 @@
     });
   }
   // Favourites sections by the item type in their "more" link, not by the
-  // translated title (K-A2): favorites.js createSections/getRouteUrl link to
+  // translated title: favorites.js createSections/getRouteUrl link to
   // list?...&type=<Type>&IsFavorite=true (appRouter.js getRouteUrl 'list').
   // The TV layout has no link there, so it keeps the English title match.
   const FAVORITES_SECTION_TYPES = { Movies: "Movie", Shows: "Series", Episodes: "Episode", People: "Person", Collections: "BoxSet", Videos: "Video" };
@@ -4089,7 +4089,7 @@
     if (byPosition) return (byPosition.StartPositionTicks || 0) / 10000000;
     return null;
   }
-  // Seek listeners (K-A15): applied at loadedmetadata/canplay and 150 ms after the
+  // Seek listeners: applied at loadedmetadata/canplay and 150 ms after the
   // first "playing", as before; then every listener still armed is removed, so a
   // later pause/resume or buffering stall no longer jumps back. Listeners that
   // never fire are dropped after SEEK_LISTEN_MAX_MS.
@@ -4120,7 +4120,7 @@
     return new Promise((resolve) => {
       const deadline = Date.now() + timeoutMs;
       const tryFind = () => {
-        const video = findPlaybackVideo(); // main player only, not a theme video (K-A5)
+        const video = findPlaybackVideo(); // main player only, not a theme video
         if (video) {
           const applySeek = () => {
             try {
@@ -4145,7 +4145,7 @@
     return new Promise((resolve) => {
       const deadline = Date.now() + timeoutMs;
       const tryFind = () => {
-        const video = findPlaybackVideo(); // main player only, not a theme video (K-A5)
+        const video = findPlaybackVideo(); // main player only, not a theme video
         if (video) {
           const applySeek = () => {
             if (!video.duration || Number.isNaN(video.duration)) return;
@@ -4190,7 +4190,7 @@
     if (isReplay) return await playViaUiReplayOnly(item, token);
     return await playViaUi(item, token);
   }
-  // Local trailer when the trailer button is hidden (K-A14). Neither version puts
+  // Local trailer when the trailer button is hidden. Neither version puts
   // playbackManager on window (only ApiClient and Emby: ServerConnections.js
   // 10.10.7:88, 12.1 lib/jellyfin-apiclient/ServerConnections.js:95), so the
   // trailer is opened as an item and its own Play button is clicked.
@@ -4254,7 +4254,7 @@
         }
         const listSelectors = LIST_VIEW_ACTION_SELECTORS[cmd.action];
         if (!listSelectors) return false;
-        // List page as before; plus the React library toolbar (K-A6/K-A4).
+        // List page as before; plus the React library toolbar.
         return await clickListActionWhenReady(cmd.action, token, 1500, false);
       }
       case "contextJump": {
@@ -4361,7 +4361,7 @@
           const success = await runCommand(cmd.innerCmd, token);
           if (!success) return false;
         }
-        // Only the visible details page's Next Up row (K-A3): viewContainer.js keeps
+        // Only the visible details page's Next Up row: viewContainer.js keeps
         // up to 3 pages in the DOM and only hides the old ones, each with its own
         // .nextUpItems (itemDetails/index.html 10.10.7:160, 12.1:140).
         const card = await waitForVisibleElement(".nextUpItems .card", token, 3000);
@@ -4370,7 +4370,7 @@
         if (cmd.shouldPlay) {
           // Desktop: the card's hover play button, as before. Mobile cards carry
           // data-action="play", TV cards no button (cardBuilder.js 10.10.7:984,1151,
-          // 12.1:842,1005): there the episode's own details page plays it (K-A9).
+          // 12.1:842,1005): there the episode's own details page plays it.
           const resumeBtn = card.querySelector('button[data-action="resume"]');
           if (resumeBtn) {
             resumeBtn.click();
@@ -4396,7 +4396,7 @@
         if (cmd.kind === "trailerAction") {
           return await playTrailerByCurrentPage(token);
         }
-        // K-C6: on a details page only its own .mainDetailButtons; on a library or
+        // On a details page only its own .mainDetailButtons; on a library or
         // list page only the Play all / Shuffle buttons - never a card's hover
         // button (cardBuilder.js data-action="resume"), which played the first card.
         const detailsItemId = getCurrentDetailsItemId();
@@ -4409,7 +4409,7 @@
         return await clickListActionWhenReady(listAction, token, 2000, true);
       }
       case "bareLetterWithAlphaFallback": {
-        // The visible picker, not the first in the DOM (K-C3): hidden Trailers-tab
+        // The visible picker, not the first in the DOM: hidden Trailers-tab
         // picker (movies.html:14/58) or a cached page's picker.
         const btn = [...document.querySelectorAll(alphaPickerSelector(cmd.letter))].find((b) => b.offsetParent !== null);
         if (btn) {
@@ -4484,15 +4484,15 @@
         if (!cmd.tabAlreadyActive) {
           if (isModernLibraryPage()) {
             // Index from the current React page's views: also Live TV and the
-            // 10.10.7 experimental pages (K-A6, K-A4).
+            // 10.10.7 experimental pages.
             const index = modernTabIndex(cmd.tabText);
             if (index === null) return false;
-            // replace after K's own jump, one entry when already there (K-A8).
+            // replace after K's own jump, one entry when already there.
             modernSwitchTab(index, !cmd.alreadyInLibrary);
             await waitForDomSettle();
             if (token !== commandToken) return false;
           } else {
-            // Tab by position, English text as fallback (K-A2).
+            // Tab by position, English text as fallback.
             const clickedTab = await clickTabWhenReady(LIBRARY_TYPE_ROUTE[cmd.libraryType], cmd.tabText, token, staleTabs);
             if (!clickedTab) return false;
           }
@@ -4613,7 +4613,7 @@
           }
           if (!outerItem) {
             const includeTypes = cmd.pickTypes.join(",");
-            const items = await fetchRandomOfType(includeTypes); // server pick (K-A16)
+            const items = await fetchRandomOfType(includeTypes); // server pick
             if (items.length === 0) return false;
             outerItem = pickRandom(items);
           }
@@ -4629,7 +4629,7 @@
         await waitForDomSettle();
         if (token !== commandToken) return false;
         // Home tabs by position (home.js getTabs: Home, Favorites), English text
-        // as fallback (K-A2). On MUI layouts they sit in the hidden classic header.
+        // as fallback. On MUI layouts they sit in the hidden classic header.
         if (cmd.target === "home") {
           const clicked = await clickTabWhenReady("home", "Home", token, staleTabs);
           if (!clicked) return false;
@@ -4790,7 +4790,7 @@
         return false;
     }
   }
-  // Order of Enters (K-A11): parsing can wait for the server, so a later
+  // Order of Enters: parsing can wait for the server, so a later
   // command may finish parsing first. It then runs, and the earlier one is
   // dropped when its parse ends. A typo (parse fails) takes no token, so it
   // never cancels a command that is already running.
@@ -4802,7 +4802,7 @@
     if (raw.trim().length < CONFIG.minLength) return;
     const parseId = ++parseSeq;
     const cmd = await parseCommand(raw);
-    // The flash shows the command text again (K-A10).
+    // The flash shows the command text again.
     const shown = raw.trim();
     if (!cmd) {
       flashResult(false, shown);
